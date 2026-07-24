@@ -4,12 +4,13 @@ Lightweight exploratory data analysis for pandas DataFrames.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md)
-- [API reference](docs/api-reference.md)
-- [Product requirements](docs/PRD.md)
-- [Changelog](CHANGELOG.md)
-- [Contributing](CONTRIBUTING.md)
-- [Code of Conduct](CODE_OF_CONDUCT.md)
+- [Getting started](https://github.com/Salajalaludin/framepeek/blob/main/docs/getting-started.md)
+- [API reference](https://github.com/Salajalaludin/framepeek/blob/main/docs/api-reference.md)
+- [Product requirements](https://github.com/Salajalaludin/framepeek/blob/main/docs/PRD.md)
+- [Changelog](https://github.com/Salajalaludin/framepeek/blob/main/CHANGELOG.md)
+- [Contributing](https://github.com/Salajalaludin/framepeek/blob/main/CONTRIBUTING.md)
+- [Code of Conduct](https://github.com/Salajalaludin/framepeek/blob/main/CODE_OF_CONDUCT.md)
+- [Release guide](https://github.com/Salajalaludin/framepeek/blob/main/docs/releasing.md)
 
 ## Usage
 
