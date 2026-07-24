@@ -4,6 +4,8 @@ Notable changes to FramePeek are recorded here.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-07-24
+
 ### Added
 
 - Titled, untruncated console output through `print_report()`.
