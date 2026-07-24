@@ -2,8 +2,14 @@
 
 Lightweight exploratory data analysis for pandas DataFrames.
 
-Product scope and acceptance criteria are documented in
-[docs/PRD.md](docs/PRD.md).
+## Documentation
+
+- [Getting started](docs/getting-started.md)
+- [API reference](docs/api-reference.md)
+- [Product requirements](docs/PRD.md)
+- [Changelog](CHANGELOG.md)
+- [Contributing](CONTRIBUTING.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## Usage
 
