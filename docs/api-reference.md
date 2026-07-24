@@ -40,6 +40,13 @@ Returns a dictionary with exactly ten keys: `overview`, `columns`, `missing`,
 `duplicates`, `numeric`, `categorical`, `outliers`, `correlations`, `target`,
 and `warnings`.
 
+### `print_report(report)`
+
+Prints every top-level report section under a title. Nested tables receive
+subheadings, and rows, columns, and long cell values are not replaced with
+formatter-generated ellipses. It returns `None` without changing the report or
+global pandas display options.
+
 ## Validation and dataset summaries
 
 ### `validate(df, target=None)`
