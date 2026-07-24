@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,7 +8,8 @@ version = "0.1.0"
 description = "Lightweight exploratory data analysis for pandas DataFrames"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { file = "LICENSE" }
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Sal" }]
 dependencies = [
     "pandas>=2.0",
@@ -21,6 +22,10 @@ dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "ruff>=0.4",
+]
+release = [
+    "build>=1.2",
+    "twine>=6.0",
 ]
 
 [tool.setuptools.packages.find]
