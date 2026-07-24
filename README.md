@@ -68,5 +68,7 @@ imbalance can be configured through the corresponding function parameters.
 
 ```bash
 python -m pip install -e ".[dev]"
+python -m ruff check .
+python -m mypy src/framepeek
 python -m pytest --cov=framepeek --cov-fail-under=100
 ```

@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Hashable, Sequence
 from itertools import combinations
 from math import inf, nan
-from typing import Any
+from typing import Any, Literal, cast
 
 import pandas as pd
 from pandas.api.types import (
@@ -410,7 +410,7 @@ def _strength(value: float) -> str:
 
 def correlations(
     df: pd.DataFrame,
-    method: str = "pearson",
+    method: Literal["pearson", "spearman", "kendall"] = "pearson",
     threshold: float = 0,
 ) -> dict[str, pd.DataFrame]:
     """Return a numeric correlation matrix and a tidy pair table."""
@@ -423,8 +423,9 @@ def correlations(
     clean = df[names].replace([inf, -inf], nan)
     matrix = clean.corr(method=method)
     rows = []
-    for left, right in combinations(names, 2):
-        value = matrix.loc[left, right]
+    for left_index, right_index in combinations(range(len(names)), 2):
+        left, right = names[left_index], names[right_index]
+        value = cast(float, matrix.iat[left_index, right_index])
         if pd.isna(value) or abs(value) < threshold:
             continue
         rows.append(
@@ -473,7 +474,7 @@ def target(
         counts = clean.value_counts(dropna=True)
         distribution = counts.rename("count").to_frame()
         distribution["percentage"] = [
-            _pct(value, len(clean)) for value in counts.to_numpy()
+            _pct(int(value), len(clean)) for value in counts.to_numpy()
         ]
         distribution = distribution.rename_axis("value").reset_index()
         ratio = float(counts.max() / counts.min()) if len(counts) > 1 else 1.0
@@ -489,7 +490,8 @@ def target(
         }
     related = correlations(df, threshold=0)["pairs"]
     related = related[
-        related["column_1"].eq(target) | related["column_2"].eq(target)
+        related["column_1"].eq(cast(Any, target))
+        | related["column_2"].eq(cast(Any, target))
     ].reset_index(drop=True)
     return {
         "type": "numeric",
@@ -655,14 +657,15 @@ def warnings(
                     )
 
     for row in outliers(df).itertuples(index=False):
-        if pd.notna(row.outlier_pct) and row.outlier_pct > outlier_threshold:
+        outlier_pct = cast(float, row.outlier_pct)
+        if pd.notna(outlier_pct) and outlier_pct > outlier_threshold:
             add(
                 "potential_outliers",
                 "medium",
                 row.column,
-                f"Column {row.column!r} contains {row.outlier_pct}% potential outliers.",
+                f"Column {row.column!r} contains {outlier_pct}% potential outliers.",
                 "Review them in domain context; do not remove automatically.",
-                row.outlier_pct,
+                outlier_pct,
             )
 
     if target is not None:
@@ -683,7 +686,7 @@ def warnings(
 def profile(
     df: pd.DataFrame,
     target: Hashable | None = None,
-    correlation_method: str = "pearson",
+    correlation_method: Literal["pearson", "spearman", "kendall"] = "pearson",
     outlier_method: str = "iqr",
     outlier_multiplier: float = 1.5,
     top_n_categories: int = 5,
