@@ -116,3 +116,6 @@ After real-world MVP feedback, prioritize only confirmed gaps. Likely
 candidates are performance sampling for large DataFrames or machine-readable
 report export. A stateful report object, plots, plugins, and additional
 DataFrame engines remain out of scope until repeated use justifies them.
+
+The warning-specific 0.2.0 gap analysis is recorded in
+[data-quality-0.2-audit.md](data-quality-0.2-audit.md).
