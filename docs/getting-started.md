@@ -3,21 +3,19 @@
 FramePeek produces a compact exploratory data analysis report from a pandas
 DataFrame without modifying the input.
 
-## Install from the repository
+## Install
 
-FramePeek 0.1.0 is not published to PyPI yet. Install the current checkout with
-Python 3.10 or newer:
+Install FramePeek with Python 3.10 or newer:
+
+```bash
+python -m pip install framepeek
+```
+
+For local development, clone the repository and use an editable install:
 
 ```bash
 git clone https://github.com/Salajalaludin/framepeek.git
 cd framepeek
-python -m venv .venv
-```
-
-Activate it with `.venv\Scripts\Activate.ps1` in PowerShell or
-`source .venv/bin/activate` in a POSIX shell, then install FramePeek:
-
-```bash
 python -m pip install -e .
 ```
 
@@ -37,14 +35,14 @@ df = pd.DataFrame(
 
 report = fp.profile(df, target="churn")
 
-print(report["overview"])
-print(report["missing"])
-print(report["warnings"])
+fp.print_report(report)
 ```
 
 `profile()` returns ten sections: `overview`, `columns`, `missing`,
 `duplicates`, `numeric`, `categorical`, `outliers`, `correlations`, `target`,
-and `warnings`. The `target` value is `None` when no target column is supplied.
+and `warnings`. `print_report()` prints each section under a title without
+truncating rows, columns, or long values. The `target` value is `None` when no
+target column is supplied.
 
 Use an individual analysis when the full report is unnecessary:
 

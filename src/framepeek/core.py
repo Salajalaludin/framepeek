@@ -717,3 +717,34 @@ def profile(
             imbalance_ratio=imbalance_ratio,
         ),
     }
+
+
+def print_report(report: dict[str, Any]) -> None:
+    """Print a profile report with titled, untruncated tables."""
+    if not isinstance(report, dict):
+        raise TypeError("report must be the dictionary returned by profile().")
+
+    def print_value(value: Any) -> None:
+        if isinstance(value, pd.DataFrame):
+            print(
+                value.to_string(
+                    index=False,
+                    max_rows=None,
+                    max_cols=None,
+                    line_width=None,
+                    max_colwidth=None,
+                )
+            )
+        elif isinstance(value, dict):
+            for key, nested in value.items():
+                if isinstance(nested, (dict, pd.DataFrame)):
+                    print(f"\n--- {str(key).replace('_', ' ').upper()} ---")
+                    print_value(nested)
+                else:
+                    print(f"{key}: {nested}")
+        else:
+            print(value)
+
+    for section, value in report.items():
+        print(f"\n=== {str(section).replace('_', ' ').upper()} ===")
+        print_value(value)

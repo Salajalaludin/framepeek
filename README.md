@@ -24,10 +24,14 @@ report = fp.profile(
     outlier_multiplier=1.5,
     top_n_categories=5,
 )
+
+fp.print_report(report)
 ```
 
 The report contains `overview`, `columns`, `missing`, `duplicates`, `numeric`,
 `categorical`, `outliers`, `correlations`, `target`, and `warnings`.
+`print_report()` gives each section a title and prints tables without
+formatter-generated ellipses.
 
 Each analysis is also available directly:
 
@@ -61,6 +65,7 @@ All functions validate their inputs and leave the original DataFrame unchanged.
 | `target` | Dictionary containing categorical or numeric target analysis |
 | `warnings` | `DataFrame` of actionable quality warnings |
 | `profile` | Dictionary containing all analyses above |
+| `print_report` | `None`; prints every profile section with a title |
 
 Thresholds for missingness, cardinality, outliers, correlations, and class
 imbalance can be configured through the corresponding function parameters.

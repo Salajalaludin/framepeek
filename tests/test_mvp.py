@@ -40,6 +40,39 @@ def test_profile_contains_complete_mvp_without_mutation() -> None:
     pd.testing.assert_frame_equal(df, original)
 
 
+def test_print_report_adds_titles_without_truncating_or_mutating(capsys) -> None:
+    long_category = "a-category-value-that-must-remain-completely-visible"
+    report = fp.profile(
+        pd.DataFrame(
+            {
+                "number": [1, 2, 3],
+                "category": [long_category, "short", "short"],
+                "target": [0, 0, 1],
+            }
+        ),
+        target="target",
+    )
+    numeric_before = report["numeric"].copy(deep=True)
+    max_colwidth_before = pd.get_option("display.max_colwidth")
+
+    fp.print_report(report)
+    output = capsys.readouterr().out
+
+    for section in report:
+        assert f"=== {section.replace('_', ' ').upper()} ===" in output
+    assert "--- MATRIX ---" in output
+    assert long_category in output
+    assert "..." not in output
+    pd.testing.assert_frame_equal(report["numeric"], numeric_before)
+    assert pd.get_option("display.max_colwidth") == max_colwidth_before
+
+    fp.print_report({"target": None})
+    assert "=== TARGET ===\nNone" in capsys.readouterr().out
+
+    with pytest.raises(TypeError, match="dictionary"):
+        fp.print_report([])
+
+
 def test_edge_cases_return_stable_empty_schemas() -> None:
     categorical_only = pd.DataFrame({"label": ["a", None, "b"]})
     numeric_only = pd.DataFrame({"value": [1, float("inf"), 3]})
