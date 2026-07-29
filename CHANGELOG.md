@@ -22,6 +22,11 @@ Notable changes to FramePeek are recorded here.
   rare-category concentration.
 - Added schema-versioned report metadata, explicit missing summaries, bounded
   text formatting, and JSON-compatible serialization.
+- Added reproducible sampling for text-warning heuristics and recorded its use
+  in report metadata.
+- Added correlation column and row limits, subset, pair-only, top-pair, overflow,
+  and Kendall safeguards.
+- Added bounded runtime and peak-memory profiling benchmarks.
 
 ## [0.1.1] - 2026-07-24
 

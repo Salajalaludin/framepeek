@@ -56,7 +56,7 @@ All functions validate their inputs and leave the original DataFrame unchanged.
 | --- | --- |
 | `overview` | `DataFrame` of dataset-level metrics |
 | `columns` | `DataFrame` with one profile row per column |
-| `missing` | `DataFrame`; row totals are stored in `.attrs["rows"]` |
+| `missing` | Dictionary containing explicit `columns` and `rows` summaries |
 | `duplicates` | Dictionary containing totals, groups, and examples |
 | `numeric` | `DataFrame` of descriptive numeric statistics |
 | `categorical` | `DataFrame` of frequency and cardinality statistics |
@@ -64,11 +64,22 @@ All functions validate their inputs and leave the original DataFrame unchanged.
 | `correlations` | Dictionary containing `matrix` and tidy `pairs` tables |
 | `target` | Dictionary containing categorical or numeric target analysis |
 | `warnings` | `DataFrame` of actionable quality warnings |
-| `profile` | Dictionary containing all analyses above |
-| `print_report` | `None`; prints every profile section with a title |
+| `profile` | Dictionary containing metadata and all analyses above |
+| `format_report` | Bounded text representation of a profile |
+| `print_report` | `None`; prints the bounded text representation |
+| `to_serializable` | JSON-compatible representation of report values |
 
 Thresholds for missingness, cardinality, outliers, correlations, and class
 imbalance can be configured through the corresponding function parameters.
+Warning text parsing is sampled reproducibly for large columns. Correlation
+analysis supports column subsets, limits, pair-only output, top pairs, and
+reproducible row sampling.
+
+Run the bounded runtime and peak-memory smoke benchmarks with:
+
+```bash
+python benchmarks/benchmark_profile.py
+```
 
 ## Development
 

@@ -7,6 +7,7 @@ import pandas as pd
 
 ColumnName = Hashable
 CorrelationMethod = Literal["pearson", "spearman", "kendall"]
+CorrelationOverflow = Literal["error", "skip"]
 OutlierMethod = Literal["iqr"]
 Severity = Literal["critical", "high", "medium", "low"]
 TargetType = Literal["auto", "categorical", "numeric"]

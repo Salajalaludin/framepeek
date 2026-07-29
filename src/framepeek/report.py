@@ -35,6 +35,8 @@ def profile(
     outlier_min_samples: int = 4,
     rare_max_count: int = 1,
     rare_concentration_ratio: float = 0.1,
+    warning_sample_size: int = 1000,
+    random_state: int = 0,
 ) -> ProfileResult:
     """Run every MVP analysis without mutating the input DataFrame."""
     validate(df, target_column)
@@ -74,8 +76,18 @@ def profile(
                 "outlier_method": outlier_method,
                 "outlier_multiplier": outlier_multiplier,
                 "target_type": target_type,
+                "warning_sample_size": warning_sample_size,
+                "random_state": random_state,
             },
-            "sampling": None,
+            "sampling": {
+                "warnings_used": len(df) > warning_sample_size
+                and any(
+                    metadata.kind == "categorical"
+                    for metadata in context.columns.values()
+                ),
+                "warning_sample_size": min(len(df), warning_sample_size),
+                "random_state": random_state,
+            },
         },
         "overview": analysis.overview(df, _context=context),
         "columns": analysis.columns(
@@ -102,6 +114,8 @@ def profile(
             outlier_multiplier=outlier_multiplier,
             rare_max_count=rare_max_count,
             rare_concentration_ratio=rare_concentration_ratio,
+            sample_size=warning_sample_size,
+            random_state=random_state,
             _outlier_result=outlier_result,
             _target_result=target_result,
             _context=context,

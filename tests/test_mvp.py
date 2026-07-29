@@ -523,3 +523,48 @@ def test_report_formatting_and_serialization_are_bounded_and_machine_readable(
     assert fp.to_serializable(pd.NA) is None
     assert fp.to_serializable({"x": pd.Series([1]).iloc[0]}) == {"x": 1}
     assert fp.to_serializable(object()).startswith("<object object")
+
+
+def test_warning_sampling_is_reproducible_and_recorded() -> None:
+    df = pd.DataFrame({"text": [str(value) for value in range(2000)]})
+
+    first = fp.profile(df, warning_sample_size=100, random_state=7)
+    second = fp.profile(df, warning_sample_size=100, random_state=7)
+
+    pd.testing.assert_frame_equal(first["warnings"], second["warnings"])
+    assert first["metadata"]["sampling"]["warnings_used"] is True
+    assert first["metadata"]["sampling"]["warning_sample_size"] == 100
+    assert (
+        fp.profile(
+            pd.DataFrame({"number": range(2000)}),
+            warning_sample_size=100,
+        )["metadata"]["sampling"]["warnings_used"]
+        is False
+    )
+
+
+def test_correlation_subset_limits_and_pair_options() -> None:
+    df = pd.DataFrame({f"x{index}": range(20) for index in range(4)})
+
+    result = fp.correlations(
+        df,
+        columns=["x0", "x1", "x2"],
+        include_matrix=False,
+        top_pairs=1,
+        sample_rows=10,
+        random_state=3,
+    )
+    skipped = fp.correlations(df, max_columns=2, overflow="skip")
+
+    assert result["matrix"].empty
+    assert len(result["pairs"]) == 1
+    assert skipped["pairs"].empty
+    with pytest.raises(ValueError, match="at most 2"):
+        fp.correlations(df, max_columns=2)
+    with pytest.raises(KeyError, match="not found"):
+        fp.correlations(df, columns=["missing"])
+    with pytest.raises(ValueError, match="sample_rows"):
+        fp.correlations(
+            pd.DataFrame({"x": range(10_001), "y": range(10_001)}),
+            method="kendall",
+        )

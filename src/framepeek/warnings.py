@@ -35,6 +35,8 @@ def warnings(
     imbalance_ratio: float = 3,
     rare_max_count: int = 1,
     rare_concentration_ratio: float = 0.1,
+    sample_size: int = 1000,
+    random_state: int = 0,
     *,
     outlier_method: OutlierMethod = "iqr",
     outlier_multiplier: float = 1.5,
@@ -53,6 +55,7 @@ def warnings(
         include_minimum=False,
     )
     _integer("rare_max_count", rare_max_count, minimum=1)
+    _integer("sample_size", sample_size, minimum=1)
     _number(
         "rare_concentration_ratio",
         rare_concentration_ratio,
@@ -181,14 +184,21 @@ def warnings(
             )
         if metadata.kind == "categorical":
             text = non_null.astype(str)
-            numeric_ratio = float(pd.to_numeric(text, errors="coerce").notna().mean())
+            parsed_text = (
+                text.sample(n=sample_size, random_state=random_state)
+                if len(text) > sample_size
+                else text
+            )
+            numeric_ratio = float(
+                pd.to_numeric(parsed_text, errors="coerce").notna().mean()
+            )
             numeric_identifier = numeric_ratio >= 0.9 and (
                 (
                     metadata.unique == metadata.non_null
-                    and text.str.len().nunique() == 1
-                    and int(text.str.len().iloc[0]) >= 5
+                    and parsed_text.str.len().nunique() == 1
+                    and int(parsed_text.str.len().iloc[0]) >= 5
                 )
-                or text.str.fullmatch(r"0\d+").any()
+                or parsed_text.str.fullmatch(r"0\d+").any()
             )
             if numeric_identifier:
                 add(
@@ -208,9 +218,9 @@ def warnings(
                     "Validate and convert it to a numeric dtype.",
                     round(numeric_ratio, 4),
                 )
-            elif text.str.contains(r"[-/:]", regex=True).mean() >= 0.9:
+            elif parsed_text.str.contains(r"[-/:]", regex=True).mean() >= 0.9:
                 date_ratio = float(
-                    pd.to_datetime(text, errors="coerce", format="mixed")
+                    pd.to_datetime(parsed_text, errors="coerce", format="mixed")
                     .notna()
                     .mean()
                 )

@@ -8,8 +8,9 @@ otherwise. Numeric configuration rejects booleans, `NaN`, and infinity.
 The supported public API is exported from `framepeek`. Implementation is
 grouped into `analysis`, `validation`, `warnings`, and `report`; configuration
 aliases `ColumnName`, `CorrelationMethod`, `OutlierMethod`, and `Severity` are
-also public. Modules prefixed with `_`, including `_context`, are internal and
-not part of the compatibility contract.
+also public, along with `CorrelationOverflow` and `TargetType`. Modules prefixed
+with `_`, including `_context`, are internal and not part of the compatibility
+contract.
 
 ## Full report
 
@@ -28,6 +29,8 @@ profile(
     high_cardinality_ratio=0.5,
     imbalance_ratio=3,
     target_type="auto",
+    warning_sample_size=1000,
+    random_state=0,
 )
 ```
 
@@ -44,10 +47,13 @@ profile(
 | `high_cardinality_ratio` | Categorical unique-value ratio within `(0, 1]`. |
 | `imbalance_ratio` | Majority-to-minority ratio above which a target is imbalanced; must exceed `1`. |
 | `target_type` | `auto`, `categorical`, or `numeric`; overrides target interpretation when requested. |
+| `warning_sample_size` | Positive maximum number of text values parsed by warning heuristics. |
+| `random_state` | Seed used for reproducible warning sampling. |
 
-Returns a dictionary with exactly ten keys: `overview`, `columns`, `missing`,
+Returns a dictionary with `metadata`, `overview`, `columns`, `missing`,
 `duplicates`, `numeric`, `categorical`, `outliers`, `correlations`, `target`,
-and `warnings`.
+and `warnings`. Metadata records versions, configuration, generation time, and
+whether warning sampling was used.
 
 ### `print_report(report)`
 
@@ -111,11 +117,35 @@ potential outlier counts. `method` must be `iqr`; `multiplier` must be positive.
 Results are diagnostic and do not remove values.
 `applicable` and `limitation` explain insufficient samples or a zero IQR.
 
-### `correlations(df, method="pearson", threshold=0)`
+### `correlations`
+
+```python
+correlations(
+    df,
+    method="pearson",
+    threshold=0,
+    min_periods=2,
+    columns=None,
+    max_columns=50,
+    overflow="error",
+    include_matrix=True,
+    top_pairs=None,
+    sample_rows=None,
+    random_state=0,
+)
+```
 
 Returns `{"matrix": DataFrame, "pairs": DataFrame}` for numeric, non-boolean
 columns. `method` accepts `pearson`, `spearman`, or `kendall`; `threshold`
-filters pairs by absolute correlation and must be within `0..1`.
+filters pairs by absolute correlation and must be within `0..1`. `columns`
+selects a subset, while `max_columns` limits work and `overflow="skip"` returns
+empty tables instead of raising. Set `include_matrix=False` for pair-only output
+and `top_pairs` to retain only the strongest pairs. `sample_rows` performs
+reproducible row sampling. Kendall on more than 10,000 rows requires
+`sample_rows`.
+
+Correlation strength labels are descriptive heuristics, not universal
+statistical rules; interpretation depends on the domain and sample.
 
 ### `target(df, target_column, imbalance_ratio=3, *, target_type="auto")`
 
@@ -139,6 +169,8 @@ warnings(
     high_cardinality_ratio=0.5,
     outlier_threshold=5,
     imbalance_ratio=3,
+    sample_size=1000,
+    random_state=0,
 )
 ```
 
@@ -168,13 +200,15 @@ Returns a `DataFrame` with `code`, `severity`, `column`, `message`,
 
 `missing_threshold` and `outlier_threshold` use percentage values.
 `near_constant_ratio` and `high_cardinality_ratio` must be within `(0, 1]`;
-`imbalance_ratio` must exceed one.
+`imbalance_ratio` must exceed one. Text parsing uses at most `sample_size`
+randomly selected values and is reproducible with `random_state`.
 
 ## MVP limitations
 
 - pandas `DataFrame` input only; no files, plotting, HTML report, CLI, or
   notebook integration.
-- In-memory analysis only; no sampling or distributed execution.
+- In-memory analysis only; sampling is limited to text-warning heuristics and
+  optional correlation rows; no distributed execution.
 - IQR is the only outlier method and warnings are deterministic heuristics, not
   domain conclusions or automatic cleaning instructions.
 - Nested, geospatial, time-series, and mixed object values receive no
