@@ -23,7 +23,7 @@ The MVP is successful when this call returns a complete reusable report:
 ```python
 import framepeek as fp
 
-report = fp.profile(df, target="target_column")
+report = fp.profile(df, target_column="target_column")
 ```
 
 The report must contain:
