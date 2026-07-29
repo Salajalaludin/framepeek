@@ -15,7 +15,7 @@ from pandas.api.types import (
 )
 
 
-def validate(df: pd.DataFrame, target: Hashable | None = None) -> None:
+def validate(df: pd.DataFrame, target_column: Hashable | None = None) -> None:
     """Validate the common DataFrame and target requirements."""
     if not isinstance(df, pd.DataFrame):
         raise TypeError(f"Expected pandas.DataFrame, received {type(df).__name__}.")
@@ -23,8 +23,8 @@ def validate(df: pd.DataFrame, target: Hashable | None = None) -> None:
         raise ValueError("DataFrame must contain at least one row and one column.")
     if df.columns.has_duplicates:
         raise ValueError("DataFrame column names must be unique.")
-    if target is not None and target not in df.columns:
-        raise KeyError(f"Target column {target!r} was not found.")
+    if target_column is not None and target_column not in df.columns:
+        raise KeyError(f"Target column {target_column!r} was not found.")
 
 
 def _pct(value: int | float, total: int) -> float:
@@ -458,14 +458,17 @@ def correlations(
 
 def target(
     df: pd.DataFrame,
-    target: Hashable,
+    target_column: Hashable,
     imbalance_ratio: float = 3,
+    *,
+    _correlation_result: dict[str, pd.DataFrame] | None = None,
+    _outlier_result: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
     """Return a categorical or numeric target summary."""
-    validate(df, target)
+    validate(df, target_column)
     if imbalance_ratio <= 1:
         raise ValueError("imbalance_ratio must be greater than one.")
-    series = df[target]
+    series = df[target_column]
     clean = series.dropna()
     categorical_target = _kind(series) in {"categorical", "boolean"} or (
         clean.nunique() <= 20
@@ -488,21 +491,26 @@ def target(
             "imbalanced": ratio >= imbalance_ratio,
             "distribution": distribution,
         }
-    related = correlations(df, threshold=0)["pairs"]
+    correlation_result = _correlation_result or correlations(df, threshold=0)
+    related = correlation_result["pairs"]
     related = related[
-        related["column_1"].eq(cast(Any, target))
-        | related["column_2"].eq(cast(Any, target))
+        related["column_1"].eq(cast(Any, target_column))
+        | related["column_2"].eq(cast(Any, target_column))
     ].reset_index(drop=True)
+    outlier_result = (
+        _outlier_result
+        if _outlier_result is not None
+        else outliers(df[[target_column]])
+    )
     return {
         "type": "numeric",
         "missing": int(series.isna().sum()),
-        "summary": numeric(df[[target]]),
-        "outliers": outliers(df[[target]]),
+        "summary": numeric(df[[target_column]]),
+        "outliers": outlier_result.loc[
+            outlier_result["column"].eq(cast(Any, target_column))
+        ].reset_index(drop=True),
         "correlations": related,
     }
-
-
-_target_summary = target
 
 
 _WARNING_COLUMNS = [
@@ -517,15 +525,20 @@ _WARNING_COLUMNS = [
 
 def warnings(
     df: pd.DataFrame,
-    target: Hashable | None = None,
+    target_column: Hashable | None = None,
     missing_threshold: float = 20,
     near_constant_ratio: float = 0.95,
     high_cardinality_ratio: float = 0.5,
     outlier_threshold: float = 5,
     imbalance_ratio: float = 3,
+    *,
+    outlier_method: str = "iqr",
+    outlier_multiplier: float = 1.5,
+    _outlier_result: pd.DataFrame | None = None,
+    _target_result: dict[str, Any] | None = None,
 ) -> pd.DataFrame:
     """Return actionable data-quality warnings."""
-    validate(df, target)
+    validate(df, target_column)
     if not 0 <= missing_threshold <= 100 or not 0 < outlier_threshold <= 100:
         raise ValueError("percentage thresholds must be within 0..100.")
     if not 0 < near_constant_ratio <= 1:
@@ -656,7 +669,12 @@ def warnings(
                         round(date_ratio, 4),
                     )
 
-    for row in outliers(df).itertuples(index=False):
+    outlier_result = (
+        _outlier_result
+        if _outlier_result is not None
+        else outliers(df, outlier_method, outlier_multiplier)
+    )
+    for row in outlier_result.itertuples(index=False):
         outlier_pct = cast(float, row.outlier_pct)
         if pd.notna(outlier_pct) and outlier_pct > outlier_threshold:
             add(
@@ -668,15 +686,17 @@ def warnings(
                 outlier_pct,
             )
 
-    if target is not None:
-        target_result = _target_summary(df, target, imbalance_ratio)
+    if target_column is not None:
+        target_result = _target_result or target(
+            df, target_column, imbalance_ratio
+        )
         if target_result["type"] == "categorical" and target_result["imbalanced"]:
             ratio = target_result["majority_to_minority_ratio"]
             add(
                 "class_imbalance",
                 "high",
-                target,
-                f"Target {target!r} has a majority-to-minority ratio of {ratio}.",
+                target_column,
+                f"Target {target_column!r} has a majority-to-minority ratio of {ratio}.",
                 "Use stratified evaluation and imbalance-aware metrics.",
                 ratio,
             )
@@ -685,7 +705,7 @@ def warnings(
 
 def profile(
     df: pd.DataFrame,
-    target: Hashable | None = None,
+    target_column: Hashable | None = None,
     correlation_method: Literal["pearson", "spearman", "kendall"] = "pearson",
     outlier_method: str = "iqr",
     outlier_multiplier: float = 1.5,
@@ -696,7 +716,20 @@ def profile(
     imbalance_ratio: float = 3,
 ) -> dict[str, Any]:
     """Run every MVP analysis without mutating the input DataFrame."""
-    validate(df, target)
+    validate(df, target_column)
+    outlier_result = outliers(df, outlier_method, outlier_multiplier)
+    correlation_result = correlations(df, correlation_method)
+    target_result = (
+        target(
+            df,
+            target_column,
+            imbalance_ratio,
+            _correlation_result=correlation_result,
+            _outlier_result=outlier_result,
+        )
+        if target_column is not None
+        else None
+    )
     return {
         "overview": overview(df),
         "columns": columns(df, high_cardinality_ratio),
@@ -704,17 +737,19 @@ def profile(
         "duplicates": duplicates(df),
         "numeric": numeric(df),
         "categorical": categorical(df, top_n_categories),
-        "outliers": outliers(df, outlier_method, outlier_multiplier),
-        "correlations": correlations(df, correlation_method),
-        "target": _target_summary(df, target, imbalance_ratio)
-        if target is not None
-        else None,
+        "outliers": outlier_result,
+        "correlations": correlation_result,
+        "target": target_result,
         "warnings": warnings(
             df,
-            target=target,
+            target_column=target_column,
             missing_threshold=warning_missing_threshold,
             high_cardinality_ratio=high_cardinality_ratio,
             imbalance_ratio=imbalance_ratio,
+            outlier_method=outlier_method,
+            outlier_multiplier=outlier_multiplier,
+            _outlier_result=outlier_result,
+            _target_result=target_result,
         ),
     }
 

@@ -1,5 +1,7 @@
 """Lightweight exploratory data analysis for pandas DataFrames."""
 
+from importlib.metadata import version
+
 from .core import (
     categorical,
     columns,
@@ -16,7 +18,10 @@ from .core import (
     warnings,
 )
 
+__version__ = version("framepeek")
+
 __all__ = [
+    "__version__",
     "categorical",
     "columns",
     "correlations",

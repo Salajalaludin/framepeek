@@ -1,7 +1,10 @@
+from importlib.metadata import version
+
 import pandas as pd
 import pytest
 
 import framepeek as fp
+from framepeek import core
 from framepeek.core import _strength
 
 
@@ -19,7 +22,7 @@ def test_profile_contains_complete_mvp_without_mutation() -> None:
     df = sample()
     original = df.copy(deep=True)
 
-    report = fp.profile(df, target="churn")
+    report = fp.profile(df, target_column="churn")
 
     assert set(report) == {
         "overview",
@@ -50,7 +53,7 @@ def test_print_report_adds_titles_without_truncating_or_mutating(capsys) -> None
                 "target": [0, 0, 1],
             }
         ),
-        target="target",
+        target_column="target",
     )
     numeric_before = report["numeric"].copy(deep=True)
     max_colwidth_before = pd.get_option("display.max_colwidth")
@@ -207,7 +210,9 @@ def test_extended_warning_detection() -> None:
             "target": [0] * 35 + [1] * 5,
         }
     )
-    codes = set(fp.warnings(df, target="target", outlier_threshold=1)["code"])
+    codes = set(
+        fp.warnings(df, target_column="target", outlier_threshold=1)["code"]
+    )
     duplicate_codes = set(fp.warnings(pd.DataFrame({"x": [1, 1]}))["code"])
 
     assert {
@@ -263,3 +268,57 @@ def test_remaining_type_and_correlation_strength_boundaries() -> None:
         "strong",
         "very strong",
     ]
+
+
+def test_profile_reuses_configured_correlation_and_outlier_results(
+    monkeypatch,
+) -> None:
+    x = pd.Series([*range(1, 30), 1000])
+    df = pd.DataFrame({"x": x, "target": x**2})
+    calls = {"correlations": 0, "outliers": 0}
+    original_correlations = core.correlations
+    original_outliers = core.outliers
+
+    def count_correlations(*args, **kwargs):
+        calls["correlations"] += 1
+        return original_correlations(*args, **kwargs)
+
+    def count_outliers(*args, **kwargs):
+        calls["outliers"] += 1
+        return original_outliers(*args, **kwargs)
+
+    monkeypatch.setattr(core, "correlations", count_correlations)
+    monkeypatch.setattr(core, "outliers", count_outliers)
+
+    report = fp.profile(
+        df,
+        target_column="target",
+        correlation_method="spearman",
+        outlier_multiplier=3,
+    )
+
+    assert calls == {"correlations": 1, "outliers": 1}
+    assert report["target"]["correlations"].equals(
+        report["correlations"]["pairs"].query(
+            "column_1 == 'target' or column_2 == 'target'"
+        ).reset_index(drop=True)
+    )
+    assert report["target"]["outliers"].equals(
+        report["outliers"].query("column == 'target'").reset_index(drop=True)
+    )
+
+
+def test_runtime_version_matches_distribution() -> None:
+    assert fp.__version__ == version("framepeek")
+
+
+def test_profile_warning_uses_configured_outlier_multiplier() -> None:
+    df = pd.DataFrame({"value": [*range(20), 100, 101]})
+
+    default_codes = set(fp.profile(df)["warnings"]["code"])
+    wide_codes = set(
+        fp.profile(df, outlier_multiplier=100)["warnings"]["code"]
+    )
+
+    assert "potential_outliers" in default_codes
+    assert "potential_outliers" not in wide_codes

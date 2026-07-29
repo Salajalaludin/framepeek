@@ -11,7 +11,7 @@ ratio parameters use `0..1` unless noted otherwise.
 ```python
 profile(
     df,
-    target=None,
+    target_column=None,
     correlation_method="pearson",
     outlier_method="iqr",
     outlier_multiplier=1.5,
@@ -26,7 +26,7 @@ profile(
 | Parameter | Meaning |
 | --- | --- |
 | `df` | Non-empty pandas `DataFrame` with unique column names. |
-| `target` | Optional existing column name to analyze as the target. |
+| `target_column` | Optional existing column name to analyze as the target. |
 | `correlation_method` | `pearson`, `spearman`, or `kendall`. |
 | `outlier_method` | Outlier method; the MVP supports only `iqr`. |
 | `outlier_multiplier` | Positive multiplier applied to the IQR bounds. |
@@ -49,7 +49,7 @@ global pandas display options.
 
 ## Validation and dataset summaries
 
-### `validate(df, target=None)`
+### `validate(df, target_column=None)`
 
 Validates the shared input rules. Returns `None`. Raises `TypeError` for a
 non-DataFrame, `ValueError` for an empty DataFrame or duplicate column names,
@@ -106,7 +106,7 @@ Returns `{"matrix": DataFrame, "pairs": DataFrame}` for numeric, non-boolean
 columns. `method` accepts `pearson`, `spearman`, or `kendall`; `threshold`
 filters pairs by absolute correlation and must be within `0..1`.
 
-### `target(df, target, imbalance_ratio=3)`
+### `target(df, target_column, imbalance_ratio=3)`
 
 Analyzes an existing target column. Targets with at most 20 non-missing unique
 values, plus categorical and boolean targets, return a categorical dictionary
@@ -121,7 +121,7 @@ dictionary with numeric summary, outliers, and correlations.
 ```python
 warnings(
     df,
-    target=None,
+    target_column=None,
     missing_threshold=20,
     near_constant_ratio=0.95,
     high_cardinality_ratio=0.5,

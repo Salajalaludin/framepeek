@@ -33,7 +33,7 @@ df = pd.DataFrame(
     }
 )
 
-report = fp.profile(df, target="churn")
+report = fp.profile(df, target_column="churn")
 
 fp.print_report(report)
 ```

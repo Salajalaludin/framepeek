@@ -19,7 +19,7 @@ import framepeek as fp
 
 report = fp.profile(
     df,
-    target="churn",
+    target_column="churn",
     correlation_method="spearman",
     outlier_multiplier=1.5,
     top_n_categories=5,
@@ -44,8 +44,8 @@ fp.numeric(df)
 fp.categorical(df)
 fp.outliers(df)
 fp.correlations(df)
-fp.target(df, target="churn")
-fp.warnings(df, target="churn")
+fp.target(df, target_column="churn")
+fp.warnings(df, target_column="churn")
 ```
 
 All functions validate their inputs and leave the original DataFrame unchanged.
