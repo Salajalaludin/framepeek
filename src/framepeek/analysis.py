@@ -14,6 +14,7 @@ from .types import (
     CategoricalTargetResult,
     ColumnName,
     CorrelationMethod,
+    CorrelationOverflow,
     CorrelationResult,
     DuplicatesResult,
     MissingResult,
@@ -471,11 +472,28 @@ def _strength(value: float) -> str:
     return "very strong"
 
 
+_CORRELATION_PAIR_COLUMNS = [
+    "column_1",
+    "column_2",
+    "correlation",
+    "absolute_correlation",
+    "direction",
+    "strength",
+]
+
+
 def correlations(
     df: pd.DataFrame,
     method: CorrelationMethod = "pearson",
     threshold: float = 0,
     min_periods: int = 2,
+    columns: Sequence[ColumnName] | None = None,
+    max_columns: int = 50,
+    overflow: CorrelationOverflow = "error",
+    include_matrix: bool = True,
+    top_pairs: int | None = None,
+    sample_rows: int | None = None,
+    random_state: int = 0,
     *,
     _context: AnalysisContext | None = None,
 ) -> CorrelationResult:
@@ -484,13 +502,40 @@ def correlations(
     _choice("method", method, {"pearson", "spearman", "kendall"})
     _number("threshold", threshold, minimum=0, maximum=1)
     _integer("min_periods", min_periods, minimum=2)
-    names = _get_context(df, _context).numeric_names
+    _integer("max_columns", max_columns, minimum=1)
+    _choice("overflow", overflow, {"error", "skip"})
+    if top_pairs is not None:
+        _integer("top_pairs", top_pairs, minimum=1)
+    if sample_rows is not None:
+        _integer("sample_rows", sample_rows, minimum=2)
+    numeric_names = _get_context(df, _context).numeric_names
+    if columns is not None:
+        unknown = [name for name in columns if name not in df.columns]
+        if unknown:
+            raise KeyError(f"Correlation columns were not found: {unknown!r}.")
+        names = [name for name in columns if name in numeric_names]
+    else:
+        names = numeric_names
+    if len(names) > max_columns:
+        if overflow == "error":
+            raise ValueError(
+                f"correlations supports at most {max_columns} numeric columns; "
+                "use columns=, overflow='skip', or increase max_columns."
+            )
+        return {
+            "matrix": pd.DataFrame(),
+            "pairs": pd.DataFrame(columns=_CORRELATION_PAIR_COLUMNS),
+        }
     clean = df[names].replace([inf, -inf], nan)
-    matrix = clean.corr(method=method, min_periods=min_periods)
+    if method == "kendall" and len(clean) > 10_000 and sample_rows is None:
+        raise ValueError("kendall requires sample_rows for more than 10000 rows.")
+    if sample_rows is not None and len(clean) > sample_rows:
+        clean = clean.sample(n=sample_rows, random_state=random_state)
+    calculated_matrix = clean.corr(method=method, min_periods=min_periods)
     rows = []
     for left_index, right_index in combinations(range(len(names)), 2):
         left, right = names[left_index], names[right_index]
-        value = cast(float, matrix.iat[left_index, right_index])
+        value = cast(float, calculated_matrix.iat[left_index, right_index])
         if pd.isna(value) or abs(value) < threshold:
             continue
         rows.append(
@@ -505,19 +550,14 @@ def correlations(
                 "strength": _strength(abs(value)),
             }
         )
-    pair_columns = [
-        "column_1",
-        "column_2",
-        "correlation",
-        "absolute_correlation",
-        "direction",
-        "strength",
-    ]
-    pairs = pd.DataFrame(rows, columns=pair_columns)
+    pairs = pd.DataFrame(rows, columns=_CORRELATION_PAIR_COLUMNS)
     if not pairs.empty:
         pairs = pairs.sort_values("absolute_correlation", ascending=False).reset_index(
             drop=True
         )
+        if top_pairs is not None:
+            pairs = pairs.head(top_pairs)
+    matrix = calculated_matrix if include_matrix else pd.DataFrame()
     return {"matrix": matrix, "pairs": pairs}
 
 

@@ -90,24 +90,24 @@ Struktur logis yang perlu tersedia:
 
 ### Performa
 
-51. Gunakan sampling untuk heuristik `numeric_as_string`.
-52. Gunakan sampling untuk heuristik `datetime_as_string`.
-53. Buat ukuran sample dapat dikonfigurasi.
-54. Gunakan random state yang konsisten jika sampling dilakukan secara acak.
-55. Catat dalam hasil atau metadata ketika analisis menggunakan sample.
-56. Hindari parsing datetime seluruh kolom hanya untuk menghasilkan warning.
+- [x] 51. Gunakan sampling untuk heuristik `numeric_as_string`.
+- [x] 52. Gunakan sampling untuk heuristik `datetime_as_string`.
+- [x] 53. Buat ukuran sample dapat dikonfigurasi.
+- [x] 54. Gunakan random state yang konsisten jika sampling dilakukan secara acak.
+- [x] 55. Catat dalam hasil atau metadata ketika analisis menggunakan sample.
+- [x] 56. Hindari parsing datetime seluruh kolom hanya untuk menghasilkan warning.
 - [x] 57. Hindari `value_counts()` berulang untuk kolom yang sama.
 - [x] 58. Hindari `nunique()` berulang untuk kolom yang sama.
 59. Hindari penghitungan deep memory bila pengguna tidak membutuhkannya.
-60. Tambahkan pilihan subset kolom untuk `correlations()`.
-61. Tambahkan batas maksimum kolom numerik untuk analisis korelasi.
-62. Tambahkan perilaku yang jelas ketika batas korelasi terlampaui: error, warning, atau skip.
-63. Tambahkan opsi hanya menghitung correlation pairs tanpa menyimpan full matrix.
-64. Tambahkan opsi membatasi jumlah pasangan korelasi teratas.
-65. Beri perlindungan terhadap penggunaan Kendall pada dataset sangat besar.
-66. Pertimbangkan sampling baris khusus untuk korelasi.
-67. Tambahkan benchmark untuk DataFrame tinggi, lebar, banyak kategorikal, dan banyak missing value.
-68. Ukur runtime serta penggunaan memori, bukan hanya test correctness.
+- [x] 60. Tambahkan pilihan subset kolom untuk `correlations()`.
+- [x] 61. Tambahkan batas maksimum kolom numerik untuk analisis korelasi.
+- [x] 62. Tambahkan perilaku yang jelas ketika batas korelasi terlampaui: error, warning, atau skip.
+- [x] 63. Tambahkan opsi hanya menghitung correlation pairs tanpa menyimpan full matrix.
+- [x] 64. Tambahkan opsi membatasi jumlah pasangan korelasi teratas.
+- [x] 65. Beri perlindungan terhadap penggunaan Kendall pada dataset sangat besar.
+- [x] 66. Pertimbangkan sampling baris khusus untuk korelasi.
+- [x] 67. Tambahkan benchmark untuk DataFrame tinggi, lebar, banyak kategorikal, dan banyak missing value.
+- [x] 68. Ukur runtime serta penggunaan memori, bukan hanya test correctness.
 
 ### Ketepatan statistik dan data quality
 
@@ -126,7 +126,7 @@ Struktur logis yang perlu tersedia:
 81. Tambahkan analisis missingness pattern antar-kolom.
 - [x] 82. Tambahkan rare-category concentration warning sesuai audit yang sudah dibuat.
 - [x] 83. Pastikan semua warning menyertakan kode, severity, metric, pesan, dan rekomendasi yang stabil.
-84. Dokumentasikan bahwa strength label pada korelasi merupakan heuristik, bukan aturan universal.
+- [x] 84. Dokumentasikan bahwa strength label pada korelasi merupakan heuristik, bukan aturan universal.
 
 ### Report dan serialization
 
@@ -157,7 +157,7 @@ Struktur logis yang perlu tersedia:
 - [x] 106. Test duplicate column diagnostics.
 - [x] 107. Test object column berisi campuran string, list, dictionary, dan angka.
 - [x] 108. Test numeric identifier agar tidak salah diklasifikasikan.
-109. Test sampling menghasilkan hasil reproducible.
+- [x] 109. Test sampling menghasilkan hasil reproducible.
 - [x] 110. Test serialization terhadap seluruh tipe output.
 111. Test bahwa input DataFrame tidak berubah setelah semua fungsi dipanggil.
 112. Tambahkan branch coverage, bukan hanya statement coverage.
@@ -189,9 +189,9 @@ Struktur logis yang perlu tersedia:
 
 ### Optimasi berikutnya
 
-14. Sampling untuk parsing heuristik.
-15. Correlation subset dan safeguards.
-16. Benchmark suite.
+- [x] 14. Sampling untuk parsing heuristik.
+- [x] 15. Correlation subset dan safeguards.
+- [x] 16. Benchmark suite.
 - [x] 17. Optimasi reuse metadata per kolom.
 18. Tambahkan missing-pattern dan non-finite analysis.
 
