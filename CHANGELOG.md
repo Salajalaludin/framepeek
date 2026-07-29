@@ -30,6 +30,10 @@ Notable changes to FramePeek are recorded here.
 - Expanded edge-case tests to nullable and non-finite data, minimal frames,
   hashable column names, and non-mutation across the public analysis API.
 - Enforced branch coverage and clean-wheel typing checks in CI.
+- Added inter-column missingness patterns and optional shallow memory
+  measurement.
+- Added `quality_warnings` as the recommended compatibility-preserving name and
+  advanced the report schema to 1.1.
 
 ## [0.1.1] - 2026-07-24
 

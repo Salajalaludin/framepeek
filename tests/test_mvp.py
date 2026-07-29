@@ -40,7 +40,7 @@ def test_profile_contains_complete_mvp_without_mutation() -> None:
     assert report["target"]["type"] == "categorical"
     assert report["target"]["imbalanced"] is True
     assert report["missing"]["rows"]["rows_with_missing"] == 1
-    assert report["metadata"]["schema_version"] == "1.0"
+    assert report["metadata"]["schema_version"] == "1.1"
     assert report["correlations"]["matrix"].shape == (2, 2)
     pd.testing.assert_frame_equal(df, original)
 
@@ -515,7 +515,7 @@ def test_report_formatting_and_serialization_are_bounded_and_machine_readable(
     assert text in capsys.readouterr().out
     assert "..." in text
     assert serialized["numeric"][0]["max"] == 1.0
-    assert serialized["metadata"]["schema_version"] == "1.0"
+    assert serialized["metadata"]["schema_version"] == "1.1"
     assert fp.to_serializable(float("inf")) == "Infinity"
     assert fp.to_serializable(float("-inf")) == "-Infinity"
     assert fp.to_serializable(float("nan")) is None
@@ -628,3 +628,38 @@ def test_every_dataframe_analysis_preserves_input() -> None:
     fp.profile(df, target_column="churn")
 
     pd.testing.assert_frame_equal(df, original)
+
+
+def test_missing_patterns_memory_option_and_quality_warning_alias(monkeypatch) -> None:
+    df = pd.DataFrame(
+        {
+            "a": [None, None, 1, 1],
+            "b": [None, 2, None, 2],
+        }
+    )
+    patterns = fp.missing(df)["patterns"]
+    calls: list[bool] = []
+    original = pd.DataFrame.memory_usage
+
+    def record_memory_usage(self, *args, deep=True, **kwargs):
+        calls.append(deep)
+        return original(self, *args, deep=deep, **kwargs)
+
+    monkeypatch.setattr(pd.DataFrame, "memory_usage", record_memory_usage)
+
+    report = fp.profile(df, deep_memory=False)
+
+    assert patterns["missing_columns"].tolist() == [
+        ("a", "b"),
+        ("a",),
+        ("b",),
+    ]
+    assert patterns["rows"].tolist() == [1, 1, 1]
+    assert calls == [False]
+    assert report["metadata"]["configuration"]["deep_memory"] is False
+    pd.testing.assert_frame_equal(fp.quality_warnings(df), fp.warnings(df))
+    assert fp.missing(pd.DataFrame({"complete": [1]}))["patterns"].empty
+    with pytest.raises(TypeError, match="deep_memory"):
+        fp.overview(df, deep_memory=1)
+    with pytest.raises(TypeError, match="deep_memory"):
+        fp.profile(df, deep_memory=1)

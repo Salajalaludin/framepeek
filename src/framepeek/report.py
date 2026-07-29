@@ -17,7 +17,7 @@ from .types import (
     TargetType,
 )
 from .validation import validate
-from .warnings import warnings
+from .warnings import quality_warnings
 
 
 def profile(
@@ -37,9 +37,12 @@ def profile(
     rare_concentration_ratio: float = 0.1,
     warning_sample_size: int = 1000,
     random_state: int = 0,
+    deep_memory: bool = True,
 ) -> ProfileResult:
     """Run every MVP analysis without mutating the input DataFrame."""
     validate(df, target_column)
+    if not isinstance(deep_memory, bool):
+        raise TypeError("deep_memory must be a boolean.")
     context = AnalysisContext.from_frame(df)
     outlier_result = analysis.outliers(
         df,
@@ -66,7 +69,7 @@ def profile(
     )
     return {
         "metadata": {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "framepeek_version": version("framepeek"),
             "pandas_version": pd.__version__,
             "python_version": python_version(),
@@ -78,6 +81,7 @@ def profile(
                 "target_type": target_type,
                 "warning_sample_size": warning_sample_size,
                 "random_state": random_state,
+                "deep_memory": deep_memory,
             },
             "sampling": {
                 "warnings_used": len(df) > warning_sample_size
@@ -89,7 +93,7 @@ def profile(
                 "random_state": random_state,
             },
         },
-        "overview": analysis.overview(df, _context=context),
+        "overview": analysis.overview(df, deep_memory, _context=context),
         "columns": analysis.columns(
             df, high_cardinality_ratio, _context=context
         ),
@@ -104,7 +108,7 @@ def profile(
         "outliers": outlier_result,
         "correlations": correlation_result,
         "target": target_result,
-        "warnings": warnings(
+        "warnings": quality_warnings(
             df,
             target_column=target_column,
             missing_threshold=warning_missing_threshold,

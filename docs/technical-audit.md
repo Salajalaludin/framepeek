@@ -12,9 +12,9 @@
 
 - [x] 6. Ganti parameter `target` menjadi `target_column`.
 - [x] 7. Hapus alias `_target_summary` setelah konflik penamaan parameter diselesaikan.
-8. Pertimbangkan mengganti nama fungsi publik `warnings()` menjadi nama yang lebih spesifik seperti `data_quality_warnings()` atau `quality_warnings()`.
-9. Bila nama `warnings()` tetap dipertahankan demi kompatibilitas, siapkan alias baru dan lakukan deprecation secara bertahap.
-10. Gunakan penamaan parameter yang konsisten di seluruh fungsi, terutama untuk threshold, ratio, method, multiplier, dan column selection.
+- [x] 8. Pertimbangkan mengganti nama fungsi publik `warnings()` menjadi nama yang lebih spesifik seperti `data_quality_warnings()` atau `quality_warnings()`.
+- [x] 9. Bila nama `warnings()` tetap dipertahankan demi kompatibilitas, siapkan alias baru dan lakukan deprecation secara bertahap.
+- [x] 10. Gunakan penamaan parameter yang konsisten di seluruh fungsi, terutama untuk threshold, ratio, method, multiplier, dan column selection.
 
 ### Validasi
 
@@ -42,10 +42,10 @@
 
 - [x] 25. Pecah `core.py` berdasarkan tanggung jawab analisis.
 - [x] 26. Pisahkan modul validasi dan helper internal.
-27. Pisahkan analisis overview dan metadata kolom.
-28. Pisahkan missing dan duplicate analysis.
-29. Pisahkan numeric, categorical, dan outlier analysis.
-30. Pisahkan correlation dan target analysis.
+- [x] 27. Pisahkan analisis overview dan metadata kolom.
+- [x] 28. Pisahkan missing dan duplicate analysis.
+- [x] 29. Pisahkan numeric, categorical, dan outlier analysis.
+- [x] 30. Pisahkan correlation dan target analysis.
 - [x] 31. Pisahkan data-quality warnings.
 - [x] 32. Pisahkan report formatting dan serialization.
 - [x] 33. Pertahankan satu public API melalui `framepeek/__init__.py`.
@@ -98,7 +98,7 @@ Struktur logis yang perlu tersedia:
 - [x] 56. Hindari parsing datetime seluruh kolom hanya untuk menghasilkan warning.
 - [x] 57. Hindari `value_counts()` berulang untuk kolom yang sama.
 - [x] 58. Hindari `nunique()` berulang untuk kolom yang sama.
-59. Hindari penghitungan deep memory bila pengguna tidak membutuhkannya.
+- [x] 59. Hindari penghitungan deep memory bila pengguna tidak membutuhkannya.
 - [x] 60. Tambahkan pilihan subset kolom untuk `correlations()`.
 - [x] 61. Tambahkan batas maksimum kolom numerik untuk analisis korelasi.
 - [x] 62. Tambahkan perilaku yang jelas ketika batas korelasi terlampaui: error, warning, atau skip.
@@ -123,7 +123,7 @@ Struktur logis yang perlu tersedia:
 - [x] 78. Tambahkan deteksi perbedaan kapitalisasi kategori.
 - [x] 79. Tambahkan deteksi leading atau trailing whitespace.
 - [x] 80. Tambahkan deteksi mixed Python object types.
-81. Tambahkan analisis missingness pattern antar-kolom.
+- [x] 81. Tambahkan analisis missingness pattern antar-kolom.
 - [x] 82. Tambahkan rare-category concentration warning sesuai audit yang sudah dibuat.
 - [x] 83. Pastikan semua warning menyertakan kode, severity, metric, pesan, dan rekomendasi yang stabil.
 - [x] 84. Dokumentasikan bahwa strength label pada korelasi merupakan heuristik, bukan aturan universal.
@@ -193,7 +193,7 @@ Struktur logis yang perlu tersedia:
 - [x] 15. Correlation subset dan safeguards.
 - [x] 16. Benchmark suite.
 - [x] 17. Optimasi reuse metadata per kolom.
-18. Tambahkan missing-pattern dan non-finite analysis.
+- [x] 18. Tambahkan missing-pattern dan non-finite analysis.
 
 ## Refactor struktur package
 
@@ -202,14 +202,24 @@ Struktur minimal yang diterapkan:
 ```text
 src/framepeek/
 ├── __init__.py
+├── _context.py
 ├── types.py
 ├── validation.py
 ├── analysis.py
 ├── warnings.py
-└── report.py
+├── report.py
+└── serialization.py
 ```
+
+Butir 27–30 diterapkan sebagai batas tanggung jawab logis di dalam
+`analysis.py`, bukan sebagai modul fisik tambahan, agar struktur minimal pilihan
+proyek tetap terjaga dan tidak menghasilkan modul satu-fungsi.
 
 - [x] Public API tetap diekspor melalui `framepeek/__init__.py`.
 - [x] `core.py` dihapus setelah tanggung jawabnya dipindahkan.
 - [x] Tidak ada modul satu-fungsi.
-- [x] `serialization.py` ditunda sampai fitur serialization dikerjakan.
+- [x] `serialization.py` ditambahkan saat fitur serialization dikerjakan.
+
+`quality_warnings()` kini menjadi nama publik yang direkomendasikan.
+`warnings()` dipertahankan sebagai alias kompatibilitas tanpa runtime warning;
+penghapusan baru dipertimbangkan pada major release.

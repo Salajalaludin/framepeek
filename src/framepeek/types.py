@@ -36,6 +36,7 @@ class MissingRowsResult(TypedDict):
 class MissingResult(TypedDict):
     columns: pd.DataFrame
     rows: MissingRowsResult
+    patterns: pd.DataFrame
 
 
 class CategoricalTargetResult(TypedDict):

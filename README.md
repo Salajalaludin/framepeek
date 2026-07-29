@@ -45,7 +45,7 @@ fp.categorical(df)
 fp.outliers(df)
 fp.correlations(df)
 fp.target(df, target_column="churn")
-fp.warnings(df, target_column="churn")
+fp.quality_warnings(df, target_column="churn")
 ```
 
 All functions validate their inputs and leave the original DataFrame unchanged.
@@ -56,14 +56,14 @@ All functions validate their inputs and leave the original DataFrame unchanged.
 | --- | --- |
 | `overview` | `DataFrame` of dataset-level metrics |
 | `columns` | `DataFrame` with one profile row per column |
-| `missing` | Dictionary containing explicit `columns` and `rows` summaries |
+| `missing` | Dictionary containing explicit `columns`, `rows`, and co-missingness `patterns` |
 | `duplicates` | Dictionary containing totals, groups, and examples |
 | `numeric` | `DataFrame` of descriptive numeric statistics |
 | `categorical` | `DataFrame` of frequency and cardinality statistics |
 | `outliers` | `DataFrame` of IQR bounds and potential outlier counts |
 | `correlations` | Dictionary containing `matrix` and tidy `pairs` tables |
 | `target` | Dictionary containing categorical or numeric target analysis |
-| `warnings` | `DataFrame` of actionable quality warnings |
+| `quality_warnings` | `DataFrame` of actionable quality warnings |
 | `profile` | Dictionary containing metadata and all analyses above |
 | `format_report` | Bounded text representation of a profile |
 | `print_report` | `None`; prints the bounded text representation |
@@ -74,6 +74,9 @@ imbalance can be configured through the corresponding function parameters.
 Warning text parsing is sampled reproducibly for large columns. Correlation
 analysis supports column subsets, limits, pair-only output, top pairs, and
 reproducible row sampling.
+`warnings()` remains available as a compatibility alias. Pass
+`deep_memory=False` to `overview()` or `profile()` when a shallow memory
+estimate is sufficient.
 
 Run the bounded runtime and peak-memory smoke benchmarks with:
 

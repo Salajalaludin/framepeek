@@ -31,7 +31,7 @@ from .types import (
     WarningsResult,
 )
 from .validation import validate
-from .warnings import warnings
+from .warnings import quality_warnings, warnings
 
 __version__ = version("framepeek")
 
@@ -61,6 +61,7 @@ __all__ = [
     "overview",
     "print_report",
     "profile",
+    "quality_warnings",
     "target",
     "to_serializable",
     "validate",
