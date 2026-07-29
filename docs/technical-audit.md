@@ -148,23 +148,23 @@ Struktur logis yang perlu tersedia:
 - [x] 97. Test bahwa outlier dan correlation tidak dihitung ulang saat dipanggil melalui `profile()`.
 - [x] 98. Test dengan mocking atau instrumentation untuk menghitung jumlah pemanggilan fungsi internal.
 - [x] 99. Test seluruh batas threshold tepat di bawah, tepat pada, dan tepat di atas batas.
-100. Test tipe pandas nullable seperti `Int64`, `Float64`, `boolean`, dan `string`.
+- [x] 100. Test tipe pandas nullable seperti `Int64`, `Float64`, `boolean`, dan `string`.
 101. Test datetime dengan timezone, timedelta, category, dan Arrow-backed string.
-102. Test semua NaN, semua infinity, campuran NaN dan infinity, serta satu nilai valid.
+- [x] 102. Test semua NaN, semua infinity, campuran NaN dan infinity, serta satu nilai valid.
 - [x] 103. Test kolom constant dan IQR nol.
-104. Test DataFrame dengan satu baris dan satu kolom.
-105. Test nama kolom integer, tuple, dan tipe hashable lain.
+- [x] 104. Test DataFrame dengan satu baris dan satu kolom.
+- [x] 105. Test nama kolom integer, tuple, dan tipe hashable lain.
 - [x] 106. Test duplicate column diagnostics.
 - [x] 107. Test object column berisi campuran string, list, dictionary, dan angka.
 - [x] 108. Test numeric identifier agar tidak salah diklasifikasikan.
 - [x] 109. Test sampling menghasilkan hasil reproducible.
 - [x] 110. Test serialization terhadap seluruh tipe output.
-111. Test bahwa input DataFrame tidak berubah setelah semua fungsi dipanggil.
-112. Tambahkan branch coverage, bukan hanya statement coverage.
+- [x] 111. Test bahwa input DataFrame tidak berubah setelah semua fungsi dipanggil.
+- [x] 112. Tambahkan branch coverage, bukan hanya statement coverage.
 113. Tambahkan property-based testing untuk invariant statistik dan schema.
-114. Test wheel yang sudah dibangun, bukan hanya editable installation.
-115. Test bahwa `py.typed` tersedia dalam wheel.
-116. Test import dan type checking dari project eksternal sederhana.
+- [x] 114. Test wheel yang sudah dibangun, bukan hanya editable installation.
+- [x] 115. Test bahwa `py.typed` tersedia dalam wheel.
+- [x] 116. Test import dan type checking dari project eksternal sederhana.
 
 ## Urutan pengerjaan
 

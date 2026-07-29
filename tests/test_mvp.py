@@ -568,3 +568,63 @@ def test_correlation_subset_limits_and_pair_options() -> None:
             pd.DataFrame({"x": range(10_001), "y": range(10_001)}),
             method="kendall",
         )
+
+
+def test_nullable_and_non_finite_edge_cases() -> None:
+    nullable = pd.DataFrame(
+        {
+            "integer": pd.Series([1, None], dtype="Int64"),
+            "float": pd.Series([1.5, None], dtype="Float64"),
+            "boolean": pd.Series([True, None], dtype="boolean"),
+            "string": pd.Series(["a", None], dtype="string"),
+        }
+    )
+    inferred = fp.columns(nullable).set_index("column")["inferred_type"]
+
+    assert inferred.to_dict() == {
+        "integer": "numeric",
+        "float": "numeric",
+        "boolean": "boolean",
+        "string": "categorical",
+    }
+    for values in (
+        [float("nan"), float("nan")],
+        [float("inf"), -float("inf")],
+        [float("nan"), float("inf")],
+        [float("nan"), float("inf"), 1],
+    ):
+        result = fp.numeric(pd.DataFrame({"x": values})).iloc[0]
+        assert result["count"] == sum(pd.notna(values)) - sum(
+            value in (float("inf"), -float("inf"))
+            for value in values
+            if pd.notna(value)
+        )
+
+
+def test_minimal_and_hashable_column_names() -> None:
+    minimal = fp.profile(pd.DataFrame({1: [1]}))
+    tuple_columns = pd.Index([("x", 1), ("y", 2)], tupleize_cols=False)
+    tuples = pd.DataFrame([[1, 2]], columns=tuple_columns)
+
+    assert minimal["overview"].set_index("metric").loc["rows", "value"] == 1
+    assert fp.columns(tuples)["column"].tolist() == list(tuple_columns)
+
+
+def test_every_dataframe_analysis_preserves_input() -> None:
+    df = sample()
+    original = df.copy(deep=True)
+
+    fp.validate(df)
+    fp.overview(df)
+    fp.columns(df)
+    fp.missing(df)
+    fp.duplicates(df)
+    fp.numeric(df)
+    fp.categorical(df)
+    fp.outliers(df)
+    fp.correlations(df)
+    fp.target(df, "churn")
+    fp.warnings(df, target_column="churn")
+    fp.profile(df, target_column="churn")
+
+    pd.testing.assert_frame_equal(df, original)
