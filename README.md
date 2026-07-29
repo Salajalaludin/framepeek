@@ -67,13 +67,17 @@ All functions validate their inputs and leave the original DataFrame unchanged.
 | `profile` | Dictionary containing metadata and all analyses above |
 | `format_report` | Bounded text representation of a profile |
 | `print_report` | `None`; prints the bounded text representation |
-| `to_serializable` | JSON-compatible representation of report values |
+| `to_serializable` | Versioned JSON-compatible envelope preserving table labels and conversion fidelity |
 
 Thresholds for missingness, cardinality, outliers, correlations, and class
 imbalance can be configured through the corresponding function parameters.
 Warning text parsing is sampled reproducibly for large columns. Correlation
 analysis supports column subsets, limits, pair-only output, top pairs, and
 reproducible row sampling.
+Serialization schema `1.0` stores DataFrames as explicit index, column, and
+data arrays. Mappings with non-string keys use entry records so distinct labels
+cannot overwrite each other; the envelope's `exact` field identifies lossy
+fallback display values.
 `warnings()` remains available as a compatibility alias. Pass
 `deep_memory=False` to `overview()` or `profile()` when a shallow memory
 estimate is sufficient.

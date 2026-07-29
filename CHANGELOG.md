@@ -6,6 +6,9 @@ Notable changes to FramePeek are recorded here.
 
 ### Changed
 
+- Replaced lossy string-key serialization with schema `1.0` envelopes that
+  preserve mapping entries, DataFrame labels, tagged scalar types, and
+  conversion fidelity.
 - Renamed target-selection parameters to `target_column`.
 - Reused correlation and outlier results throughout each `profile()` call.
 - Exposed `framepeek.__version__` and marked the distribution as typed.

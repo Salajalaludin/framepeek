@@ -64,6 +64,17 @@ subheadings, and rows, columns, and long cell values are not replaced with
 formatter-generated ellipses. It returns `None` without changing the report or
 global pandas display options.
 
+### `to_serializable(value)`
+
+Returns a JSON-compatible envelope with `schema_version`, `exact`, and `data`.
+Serialization schema `1.0` stores DataFrames with explicit index, column, and
+data arrays. String-keyed dictionaries remain objects; other mappings use
+ordered `key`/`value` entry records, preventing distinct labels such as `1`
+and `"1"` from colliding. Tagged values preserve tuples, datetimes, missing
+values, non-finite floats, sets, and pandas/NumPy scalars. `exact` is `False`
+when an unsupported object can only be represented by its type and display
+text.
+
 ## Validation and dataset summaries
 
 ### `validate(df, target_column=None)`
