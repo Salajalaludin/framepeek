@@ -5,6 +5,7 @@ from typing import Any, cast
 import pandas as pd
 
 from . import analysis
+from ._context import AnalysisContext
 from .types import ColumnName, OutlierMethod, Severity
 from .validation import _number, validate
 
@@ -31,6 +32,7 @@ def warnings(
     outlier_multiplier: float = 1.5,
     _outlier_result: pd.DataFrame | None = None,
     _target_result: dict[str, Any] | None = None,
+    _context: AnalysisContext | None = None,
 ) -> pd.DataFrame:
     """Return actionable data-quality warnings."""
     validate(df, target_column)
@@ -57,6 +59,7 @@ def warnings(
         include_minimum=False,
     )
 
+    context = _context or AnalysisContext.from_frame(df)
     rows: list[dict[str, Any]] = []
 
     def add(
@@ -91,9 +94,10 @@ def warnings(
 
     for name in df.columns:
         series = df[name]
+        metadata = context.columns[name]
         non_null = series.dropna()
-        unique = int(non_null.nunique())
-        missing_pct = analysis._pct(series.isna().sum(), len(series))
+        unique = metadata.unique
+        missing_pct = analysis._pct(metadata.missing, len(series))
         if not len(non_null):
             add(
                 "all_missing",
@@ -114,7 +118,7 @@ def warnings(
                 unique,
             )
         else:
-            top_ratio = float(non_null.value_counts().iloc[0] / len(non_null))
+            top_ratio = float(metadata.value_counts.iloc[0] / metadata.non_null)
             if top_ratio >= near_constant_ratio:
                 add(
                     "near_constant",
@@ -156,7 +160,7 @@ def warnings(
                 "Investigate the missing-data mechanism.",
                 missing_pct,
             )
-        if analysis._kind(series) == "categorical":
+        if metadata.kind == "categorical":
             text = non_null.astype(str)
             numeric_ratio = float(pd.to_numeric(text, errors="coerce").notna().mean())
             if numeric_ratio >= 0.9:
