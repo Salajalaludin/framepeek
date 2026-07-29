@@ -1,8 +1,9 @@
 # API reference
 
-All public functions accept a pandas `DataFrame`, validate it, and leave it
-unchanged. Percentage parameters and output percentages use the `0..100` scale;
-ratio parameters use `0..1` unless noted otherwise.
+All public functions accept a pandas `DataFrame` with a single-level column
+index, validate it, and leave it unchanged. Percentage parameters and output
+percentages use the `0..100` scale; ratio parameters use `0..1` unless noted
+otherwise. Numeric configuration rejects booleans, `NaN`, and infinity.
 
 ## Full report
 
@@ -52,8 +53,9 @@ global pandas display options.
 ### `validate(df, target_column=None)`
 
 Validates the shared input rules. Returns `None`. Raises `TypeError` for a
-non-DataFrame, `ValueError` for an empty DataFrame or duplicate column names,
-and `KeyError` for an unknown target.
+non-DataFrame or MultiIndex columns, `ValueError` for an empty DataFrame or
+duplicate column names, and `KeyError` for an unknown target. Duplicate-column
+errors include each repeated label and its occurrence count.
 
 ### `overview(df)`
 

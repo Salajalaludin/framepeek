@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Hashable, Sequence
 from itertools import combinations
-from math import inf, nan
+from math import inf, isfinite, nan
+from numbers import Real
 from typing import Any, Literal, cast
 
 import pandas as pd
@@ -15,14 +17,60 @@ from pandas.api.types import (
 )
 
 
+def _number(
+    name: str,
+    value: object,
+    *,
+    minimum: float,
+    maximum: float | None = None,
+    include_minimum: bool = True,
+) -> float:
+    if isinstance(value, bool) or not isinstance(value, Real):
+        raise TypeError(f"{name} must be a finite number.")
+    result = float(value)
+    if not isfinite(result):
+        raise ValueError(f"{name} must be a finite number.")
+    below = result < minimum if include_minimum else result <= minimum
+    if below or maximum is not None and result > maximum:
+        lower = "[" if include_minimum else "("
+        upper = str(maximum) if maximum is not None else "infinity"
+        raise ValueError(f"{name} must be within {lower}{minimum}, {upper}].")
+    return result
+
+
+def _integer(name: str, value: object, *, minimum: int) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{name} must be an integer.")
+    if value < minimum:
+        raise ValueError(f"{name} must be at least {minimum}.")
+    return value
+
+
+def _choice(name: str, value: object, choices: set[str]) -> str:
+    if not isinstance(value, str):
+        raise TypeError(f"{name} must be a string.")
+    if value not in choices:
+        expected = ", ".join(repr(choice) for choice in sorted(choices))
+        raise ValueError(f"{name} must be one of: {expected}.")
+    return value
+
+
 def validate(df: pd.DataFrame, target_column: Hashable | None = None) -> None:
     """Validate the common DataFrame and target requirements."""
     if not isinstance(df, pd.DataFrame):
         raise TypeError(f"Expected pandas.DataFrame, received {type(df).__name__}.")
     if df.empty or len(df.columns) == 0:
         raise ValueError("DataFrame must contain at least one row and one column.")
+    if isinstance(df.columns, pd.MultiIndex):
+        raise TypeError("DataFrame columns must use a single-level Index.")
     if df.columns.has_duplicates:
-        raise ValueError("DataFrame column names must be unique.")
+        counts = Counter(df.columns)
+        details = ", ".join(
+            f"{name!r} ({count} occurrences)"
+            for name, count in counts.items()
+            if count > 1
+        )
+        raise ValueError(f"DataFrame columns must be unique; duplicates: {details}.")
     if target_column is not None and target_column not in df.columns:
         raise KeyError(f"Target column {target_column!r} was not found.")
 
@@ -82,8 +130,13 @@ def overview(df: pd.DataFrame) -> pd.DataFrame:
 def columns(df: pd.DataFrame, high_cardinality_ratio: float = 0.5) -> pd.DataFrame:
     """Return one structural and quality summary row per column."""
     validate(df)
-    if not 0 < high_cardinality_ratio <= 1:
-        raise ValueError("high_cardinality_ratio must be in (0, 1].")
+    _number(
+        "high_cardinality_ratio",
+        high_cardinality_ratio,
+        minimum=0,
+        maximum=1,
+        include_minimum=False,
+    )
 
     rows: list[dict[str, Any]] = []
     for name in df.columns:
@@ -128,9 +181,12 @@ def missing(
     validate(df)
     if not isinstance(thresholds, tuple) or len(thresholds) != 3:
         raise ValueError("thresholds must contain exactly three values.")
-    low, moderate, high = thresholds
-    if not 0 <= low < moderate < high <= 100:
-        raise ValueError("thresholds must be three increasing values within 0..100.")
+    low, moderate, high = (
+        _number(f"thresholds[{index}]", value, minimum=0, maximum=100)
+        for index, value in enumerate(thresholds)
+    )
+    if not low < moderate < high:
+        raise ValueError("thresholds must be strictly increasing.")
 
     counts = df.isna().sum()
     result = pd.DataFrame(
@@ -173,8 +229,7 @@ def duplicates(
 ) -> dict[str, Any]:
     """Return duplicate totals, repeated groups, and bounded examples."""
     validate(df)
-    if not isinstance(max_examples, int) or max_examples < 0:
-        raise ValueError("max_examples must be non-negative.")
+    _integer("max_examples", max_examples, minimum=0)
     if subset is not None:
         unknown = [name for name in subset if name not in df.columns]
         if unknown:
@@ -302,13 +357,8 @@ def categorical(
 ) -> pd.DataFrame:
     """Return frequency and cardinality summaries for categorical columns."""
     validate(df)
-    if (
-        not isinstance(top_n, int)
-        or not isinstance(rare_max_count, int)
-        or top_n <= 0
-        or rare_max_count < 1
-    ):
-        raise ValueError("top_n and rare_max_count must be positive integers.")
+    _integer("top_n", top_n, minimum=1)
+    _integer("rare_max_count", rare_max_count, minimum=1)
     rows: list[dict[str, Any]] = []
     for name in df.columns:
         series = df[name]
@@ -362,10 +412,8 @@ def outliers(
 ) -> pd.DataFrame:
     """Return IQR-based potential outlier summaries for numeric columns."""
     validate(df)
-    if method != "iqr":
-        raise ValueError("method must be 'iqr'.")
-    if multiplier <= 0:
-        raise ValueError("multiplier must be greater than zero.")
+    _choice("method", method, {"iqr"})
+    _number("multiplier", multiplier, minimum=0, include_minimum=False)
     rows: list[dict[str, Any]] = []
     for name in _numeric_names(df):
         clean = df[name].replace([inf, -inf], nan).dropna()
@@ -415,10 +463,8 @@ def correlations(
 ) -> dict[str, pd.DataFrame]:
     """Return a numeric correlation matrix and a tidy pair table."""
     validate(df)
-    if method not in {"pearson", "spearman", "kendall"}:
-        raise ValueError("method must be 'pearson', 'spearman', or 'kendall'.")
-    if not 0 <= threshold <= 1:
-        raise ValueError("threshold must be within 0..1.")
+    _choice("method", method, {"pearson", "spearman", "kendall"})
+    _number("threshold", threshold, minimum=0, maximum=1)
     names = _numeric_names(df)
     clean = df[names].replace([inf, -inf], nan)
     matrix = clean.corr(method=method)
@@ -466,8 +512,12 @@ def target(
 ) -> dict[str, Any]:
     """Return a categorical or numeric target summary."""
     validate(df, target_column)
-    if imbalance_ratio <= 1:
-        raise ValueError("imbalance_ratio must be greater than one.")
+    _number(
+        "imbalance_ratio",
+        imbalance_ratio,
+        minimum=1,
+        include_minimum=False,
+    )
     series = df[target_column]
     clean = series.dropna()
     categorical_target = _kind(series) in {"categorical", "boolean"} or (
@@ -539,12 +589,28 @@ def warnings(
 ) -> pd.DataFrame:
     """Return actionable data-quality warnings."""
     validate(df, target_column)
-    if not 0 <= missing_threshold <= 100 or not 0 < outlier_threshold <= 100:
-        raise ValueError("percentage thresholds must be within 0..100.")
-    if not 0 < near_constant_ratio <= 1:
-        raise ValueError("near_constant_ratio must be in (0, 1].")
-    if not 0 < high_cardinality_ratio <= 1:
-        raise ValueError("high_cardinality_ratio must be in (0, 1].")
+    _number("missing_threshold", missing_threshold, minimum=0, maximum=100)
+    _number(
+        "outlier_threshold",
+        outlier_threshold,
+        minimum=0,
+        maximum=100,
+        include_minimum=False,
+    )
+    _number(
+        "near_constant_ratio",
+        near_constant_ratio,
+        minimum=0,
+        maximum=1,
+        include_minimum=False,
+    )
+    _number(
+        "high_cardinality_ratio",
+        high_cardinality_ratio,
+        minimum=0,
+        maximum=1,
+        include_minimum=False,
+    )
 
     rows: list[dict[str, Any]] = []
 

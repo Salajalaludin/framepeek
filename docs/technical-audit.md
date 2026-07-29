@@ -18,14 +18,14 @@
 
 ### Validasi
 
-11. Satukan validasi angka positif, integer non-negatif, persentase, rasio, threshold, dan pilihan metode ke helper internal.
-12. Samakan format dan isi pesan error di seluruh fungsi.
-13. Perbaiki error duplicate column agar menyebutkan nama kolom yang duplikat beserta jumlah kemunculannya.
-14. Validasi tipe boolean secara khusus karena `bool` merupakan subclass dari `int` di Python.
-15. Validasi nilai numerik non-finite seperti `NaN`, `inf`, dan `-inf` pada parameter konfigurasi.
-16. Pastikan urutan threshold divalidasi secara konsisten.
-17. Tambahkan validasi untuk DataFrame dengan MultiIndex column jika belum ingin didukung.
-18. Bedakan error input pengguna, error kolom tidak ditemukan, dan error konfigurasi internal.
+- [x] 11. Satukan validasi angka positif, integer non-negatif, persentase, rasio, threshold, dan pilihan metode ke helper internal.
+- [x] 12. Samakan format dan isi pesan error di seluruh fungsi.
+- [x] 13. Perbaiki error duplicate column agar menyebutkan nama kolom yang duplikat beserta jumlah kemunculannya.
+- [x] 14. Validasi tipe boolean secara khusus karena `bool` merupakan subclass dari `int` di Python.
+- [x] 15. Validasi nilai numerik non-finite seperti `NaN`, `inf`, dan `-inf` pada parameter konfigurasi.
+- [x] 16. Pastikan urutan threshold divalidasi secara konsisten.
+- [x] 17. Tambahkan validasi untuk DataFrame dengan MultiIndex column jika belum ingin didukung.
+- [x] 18. Bedakan error input pengguna, error kolom tidak ditemukan, dan error konfigurasi internal.
 
 ## Yang harus ditambahkan
 
@@ -147,14 +147,14 @@ Struktur logis yang perlu tersedia:
 - [x] 96. Test bahwa `outlier_multiplier` konsisten antara bagian outliers dan warnings.
 - [x] 97. Test bahwa outlier dan correlation tidak dihitung ulang saat dipanggil melalui `profile()`.
 - [x] 98. Test dengan mocking atau instrumentation untuk menghitung jumlah pemanggilan fungsi internal.
-99. Test seluruh batas threshold tepat di bawah, tepat pada, dan tepat di atas batas.
+- [x] 99. Test seluruh batas threshold tepat di bawah, tepat pada, dan tepat di atas batas.
 100. Test tipe pandas nullable seperti `Int64`, `Float64`, `boolean`, dan `string`.
 101. Test datetime dengan timezone, timedelta, category, dan Arrow-backed string.
 102. Test semua NaN, semua infinity, campuran NaN dan infinity, serta satu nilai valid.
 103. Test kolom constant dan IQR nol.
 104. Test DataFrame dengan satu baris dan satu kolom.
 105. Test nama kolom integer, tuple, dan tipe hashable lain.
-106. Test duplicate column diagnostics.
+- [x] 106. Test duplicate column diagnostics.
 107. Test object column berisi campuran string, list, dictionary, dan angka.
 108. Test numeric identifier agar tidak salah diklasifikasikan.
 109. Test sampling menghasilkan hasil reproducible.
@@ -180,7 +180,7 @@ Struktur logis yang perlu tersedia:
 
 ### Refactor berikutnya
 
-8. Buat validation helpers.
+- [x] 8. Buat validation helpers.
 9. Buat analysis context.
 10. Pecah `core.py`.
 11. Tambahkan typed result.

@@ -241,7 +241,7 @@ def test_extended_warning_detection() -> None:
         (lambda: fp.outliers(sample(), multiplier=0), "multiplier"),
         (lambda: fp.correlations(sample(), threshold=2), "threshold"),
         (lambda: fp.target(sample(), "churn", imbalance_ratio=1), "imbalance_ratio"),
-        (lambda: fp.warnings(sample(), missing_threshold=-1), "percentage"),
+        (lambda: fp.warnings(sample(), missing_threshold=-1), "missing_threshold"),
         (lambda: fp.warnings(sample(), near_constant_ratio=0), "near_constant_ratio"),
         (lambda: fp.warnings(sample(), high_cardinality_ratio=2), "high_cardinality"),
     ],
@@ -322,3 +322,90 @@ def test_profile_warning_uses_configured_outlier_multiplier() -> None:
 
     assert "potential_outliers" in default_codes
     assert "potential_outliers" not in wide_codes
+
+
+@pytest.mark.parametrize("value", [True, False, float("nan"), float("inf"), -float("inf")])
+def test_numeric_configuration_rejects_bool_and_non_finite_values(value) -> None:
+    expected = TypeError if isinstance(value, bool) else ValueError
+
+    with pytest.raises(expected, match="finite number"):
+        fp.outliers(sample(), multiplier=value)
+    with pytest.raises(expected, match="finite number"):
+        fp.correlations(sample(), threshold=value)
+    with pytest.raises(expected, match="finite number"):
+        fp.warnings(sample(), near_constant_ratio=value)
+
+
+@pytest.mark.parametrize(
+    ("call", "valid_boundary", "invalid_value"),
+    [
+        (lambda value: fp.columns(sample(), value), 1, 1.01),
+        (lambda value: fp.correlations(sample(), threshold=value), 1, 1.01),
+        (lambda value: fp.warnings(sample(), missing_threshold=value), 100, 100.01),
+        (lambda value: fp.warnings(sample(), outlier_threshold=value), 100, 100.01),
+    ],
+)
+def test_percentage_and_ratio_upper_boundaries(
+    call, valid_boundary, invalid_value
+) -> None:
+    call(valid_boundary)
+    with pytest.raises(ValueError):
+        call(invalid_value)
+
+
+@pytest.mark.parametrize(
+    "thresholds",
+    [
+        (-0.01, 20, 50),
+        (0, 20, 100.01),
+        (5, 5, 50),
+        (20, 5, 50),
+        (False, 20, 50),
+        (float("nan"), 20, 50),
+    ],
+)
+def test_missing_thresholds_reject_invalid_bounds_and_order(thresholds) -> None:
+    with pytest.raises((TypeError, ValueError), match="thresholds"):
+        fp.missing(sample(), thresholds)
+
+
+def test_duplicate_column_diagnostics_and_multiindex_rejection() -> None:
+    duplicate = pd.DataFrame([[1, 2, 3]], columns=["id", "id", "value"])
+    multiindex = pd.DataFrame(
+        [[1, 2]],
+        columns=pd.MultiIndex.from_tuples([("a", "x"), ("b", "y")]),
+    )
+
+    with pytest.raises(
+        ValueError, match=r"'id' \(2 occurrences\)"
+    ):
+        fp.validate(duplicate)
+    with pytest.raises(TypeError, match="single-level Index"):
+        fp.validate(multiindex)
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda: fp.duplicates(sample(), max_examples=True),
+        lambda: fp.categorical(sample(), top_n=True),
+        lambda: fp.categorical(sample(), rare_max_count=False),
+    ],
+)
+def test_integer_configuration_rejects_boolean(call) -> None:
+    with pytest.raises(TypeError, match="integer"):
+        call()
+
+
+def test_method_configuration_requires_string() -> None:
+    with pytest.raises(TypeError, match="string"):
+        fp.outliers(sample(), method=True)
+
+
+def test_validation_error_classes_distinguish_input_column_and_configuration() -> None:
+    with pytest.raises(TypeError):
+        fp.validate([])
+    with pytest.raises(KeyError):
+        fp.target(sample(), "unknown")
+    with pytest.raises(ValueError):
+        fp.correlations(sample(), threshold=2)

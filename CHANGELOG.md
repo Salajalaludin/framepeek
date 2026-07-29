@@ -9,6 +9,8 @@ Notable changes to FramePeek are recorded here.
 - Renamed target-selection parameters to `target_column`.
 - Reused correlation and outlier results throughout each `profile()` call.
 - Exposed `framepeek.__version__` and marked the distribution as typed.
+- Standardized finite numeric, integer, method, threshold, and DataFrame
+  validation with clearer duplicate-column diagnostics.
 
 ## [0.1.1] - 2026-07-24
 
