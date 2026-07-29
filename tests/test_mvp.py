@@ -221,7 +221,6 @@ def test_extended_warning_detection() -> None:
         "high_cardinality",
         "high_missing",
         "datetime_as_string",
-        "potential_outliers",
         "class_imbalance",
     } <= codes
     assert "duplicate_rows" in duplicate_codes
@@ -443,3 +442,53 @@ def test_target_type_overrides_low_cardinality_numeric_inference() -> None:
 
     with pytest.raises(ValueError, match="target_type"):
         fp.target(df, "target", target_type="invalid")
+
+
+def test_non_finite_statistics_are_separate_from_missing_values() -> None:
+    df = pd.DataFrame(
+        {"value": [None, float("inf"), -float("inf"), 1.0]}
+    )
+    row = fp.numeric(df).iloc[0]
+
+    assert row["count"] == 1
+    assert row["missing"] == 1
+    assert row["non_finite"] == 2
+    assert row["positive_infinity"] == 1
+    assert row["negative_infinity"] == 1
+    assert "non_finite_values" in set(fp.warnings(df)["code"])
+
+
+def test_outlier_limitations_are_explicit() -> None:
+    result = fp.outliers(
+        pd.DataFrame({"constant": [1] * 5, "small": [1, 2, None, None, None]})
+    ).set_index("column")
+
+    assert result.loc["constant", "limitation"] == "zero_iqr"
+    assert result.loc["constant", "applicable"] == False  # noqa: E712
+    assert result.loc["small", "limitation"] == "insufficient_sample"
+
+
+def test_text_and_category_quality_warnings() -> None:
+    df = pd.DataFrame(
+        {
+            "text": [" A", "a", "", " ", "rare"],
+            "numeric_id": ["00101", "00102", "00103", "00104", "00105"],
+            "mixed": ["a", 1, {"x": 1}, ["b"], None],
+        }
+    )
+    codes = set(
+        fp.warnings(
+            df,
+            rare_max_count=1,
+            rare_concentration_ratio=0.2,
+        )["code"]
+    )
+
+    assert {
+        "empty_string",
+        "surrounding_whitespace",
+        "category_case",
+        "rare_category_concentration",
+        "numeric_identifier",
+        "mixed_object_types",
+    } <= codes

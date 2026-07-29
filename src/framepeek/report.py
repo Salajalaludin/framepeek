@@ -29,12 +29,19 @@ def profile(
     high_cardinality_ratio: float = 0.5,
     imbalance_ratio: float = 3,
     target_type: TargetType = "auto",
+    outlier_min_samples: int = 4,
+    rare_max_count: int = 1,
+    rare_concentration_ratio: float = 0.1,
 ) -> ProfileResult:
     """Run every MVP analysis without mutating the input DataFrame."""
     validate(df, target_column)
     context = AnalysisContext.from_frame(df)
     outlier_result = analysis.outliers(
-        df, outlier_method, outlier_multiplier, _context=context
+        df,
+        outlier_method,
+        outlier_multiplier,
+        min_samples=outlier_min_samples,
+        _context=context,
     )
     correlation_result = analysis.correlations(
         df, correlation_method, _context=context
@@ -76,6 +83,8 @@ def profile(
             imbalance_ratio=imbalance_ratio,
             outlier_method=outlier_method,
             outlier_multiplier=outlier_multiplier,
+            rare_max_count=rare_max_count,
+            rare_concentration_ratio=rare_concentration_ratio,
             _outlier_result=outlier_result,
             _target_result=target_result,
             _context=context,
