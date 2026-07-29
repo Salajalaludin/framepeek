@@ -1,3 +1,4 @@
+import json
 from importlib.metadata import version
 
 import pandas as pd
@@ -512,17 +513,68 @@ def test_report_formatting_and_serialization_are_bounded_and_machine_readable(
     fp.print_report(report, max_rows=1, max_columns=2, max_colwidth=8)
     serialized = fp.to_serializable(report)
 
+    json.dumps(serialized)
     assert text in capsys.readouterr().out
     assert "..." in text
-    assert serialized["numeric"][0]["max"] == 1.0
-    assert serialized["metadata"]["schema_version"] == "1.1"
-    assert fp.to_serializable(float("inf")) == "Infinity"
-    assert fp.to_serializable(float("-inf")) == "-Infinity"
-    assert fp.to_serializable(float("nan")) is None
-    assert fp.to_serializable(pd.Timestamp("2025-01-01")) == "2025-01-01T00:00:00"
-    assert fp.to_serializable(pd.NA) is None
-    assert fp.to_serializable({"x": pd.Series([1]).iloc[0]}) == {"x": 1}
-    assert fp.to_serializable(object()).startswith("<object object")
+    assert serialized["schema_version"] == "1.0"
+    assert serialized["exact"] is True
+    assert serialized["data"]["metadata"]["schema_version"] == "1.1"
+    assert serialized["data"]["numeric"]["type"] == "dataframe"
+    assert fp.to_serializable(float("inf"))["data"]["value"] == "infinity"
+    assert fp.to_serializable(float("-inf"))["data"]["value"] == "-infinity"
+    assert fp.to_serializable(float("nan"))["data"]["value"] == "nan"
+    assert fp.to_serializable(pd.Timestamp("2025-01-01"))["data"] == {
+        "type": "Timestamp",
+        "value": "2025-01-01T00:00:00",
+    }
+    assert fp.to_serializable(pd.NA)["data"]["type"] == "NAType"
+    assert fp.to_serializable({"x": pd.Series([1]).iloc[0]})["data"] == {
+        "x": {"type": "int64", "value": 1}
+    }
+    assert fp.to_serializable(object())["exact"] is False
+
+
+def test_serialization_preserves_mixed_mapping_keys_and_dataframe_labels() -> None:
+    mapping = fp.to_serializable(
+        {1: "integer", "1": "string", (1, "x"): pd.NA}
+    )
+    entries = mapping["data"]["entries"]
+
+    json.dumps(mapping)
+    assert mapping["exact"] is True
+    assert [entry["key"] for entry in entries] == [
+        1,
+        "1",
+        {"type": "tuple", "items": [1, "x"]},
+    ]
+    assert [entry["value"] for entry in entries[:2]] == [
+        "integer",
+        "string",
+    ]
+
+    matrix = pd.DataFrame(
+        [[1.0, 0.5], [0.5, 1.0]],
+        index=pd.Index([1, "1"], name=("row", 1)),
+        columns=[True, pd.Timestamp("2025-01-01")],
+    )
+    serialized = fp.to_serializable(matrix)["data"]
+
+    assert serialized["index"] == [1, "1"]
+    assert serialized["index_names"] == [
+        {"type": "tuple", "items": ["row", 1]}
+    ]
+    assert serialized["columns"] == [
+        True,
+        {"type": "Timestamp", "value": "2025-01-01T00:00:00"},
+    ]
+    assert serialized["data"] == [
+        {"type": "tuple", "items": [1.0, 0.5]},
+        {"type": "tuple", "items": [0.5, 1.0]},
+    ]
+    assert fp.to_serializable(pd.NaT)["data"]["type"] == "NaTType"
+    set_result = fp.to_serializable({1, 2})
+    assert set_result["data"]["type"] == "set"
+    assert set(set_result["data"]["items"]) == {1, 2}
 
 
 def test_warning_sampling_is_reproducible_and_recorded() -> None:
