@@ -37,6 +37,9 @@ framepeek = ["py.typed"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+[tool.coverage.run]
+branch = true
+
 [tool.ruff]
 target-version = "py310"
 

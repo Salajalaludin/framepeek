@@ -27,6 +27,9 @@ Notable changes to FramePeek are recorded here.
 - Added correlation column and row limits, subset, pair-only, top-pair, overflow,
   and Kendall safeguards.
 - Added bounded runtime and peak-memory profiling benchmarks.
+- Expanded edge-case tests to nullable and non-finite data, minimal frames,
+  hashable column names, and non-mutation across the public analysis API.
+- Enforced branch coverage and clean-wheel typing checks in CI.
 
 ## [0.1.1] - 2026-07-24
 
