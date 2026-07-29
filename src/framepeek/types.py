@@ -26,6 +26,17 @@ class DuplicatesResult(TypedDict):
     examples: pd.DataFrame
 
 
+class MissingRowsResult(TypedDict):
+    rows_with_missing: int
+    complete_rows: int
+    complete_rows_pct: float
+
+
+class MissingResult(TypedDict):
+    columns: pd.DataFrame
+    rows: MissingRowsResult
+
+
 class CategoricalTargetResult(TypedDict):
     type: Literal["categorical"]
     classes: int
@@ -50,9 +61,10 @@ WarningsResult = pd.DataFrame
 
 
 class ProfileResult(TypedDict):
+    metadata: dict[str, object]
     overview: pd.DataFrame
     columns: pd.DataFrame
-    missing: pd.DataFrame
+    missing: MissingResult
     duplicates: DuplicatesResult
     numeric: pd.DataFrame
     categorical: pd.DataFrame

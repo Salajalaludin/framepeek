@@ -1,5 +1,8 @@
 """Profile orchestration and text report formatting."""
 
+from datetime import datetime, timezone
+from importlib.metadata import version
+from platform import python_version
 from typing import Any
 
 import pandas as pd
@@ -60,6 +63,20 @@ def profile(
         else None
     )
     return {
+        "metadata": {
+            "schema_version": "1.0",
+            "framepeek_version": version("framepeek"),
+            "pandas_version": pd.__version__,
+            "python_version": python_version(),
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "configuration": {
+                "correlation_method": correlation_method,
+                "outlier_method": outlier_method,
+                "outlier_multiplier": outlier_multiplier,
+                "target_type": target_type,
+            },
+            "sampling": None,
+        },
         "overview": analysis.overview(df, _context=context),
         "columns": analysis.columns(
             df, high_cardinality_ratio, _context=context
@@ -92,32 +109,59 @@ def profile(
     }
 
 
-def print_report(report: ProfileResult | dict[str, Any]) -> None:
-    """Print a profile report with titled, untruncated tables."""
+def format_report(
+    report: ProfileResult | dict[str, Any],
+    *,
+    max_rows: int = 20,
+    max_columns: int = 12,
+    max_colwidth: int = 40,
+) -> str:
+    """Format a bounded text report."""
     if not isinstance(report, dict):
         raise TypeError("report must be the dictionary returned by profile().")
 
-    def print_value(value: Any) -> None:
+    lines: list[str] = []
+
+    def format_value(value: Any) -> None:
         if isinstance(value, pd.DataFrame):
-            print(
+            lines.append(
                 value.to_string(
                     index=False,
-                    max_rows=None,
-                    max_cols=None,
+                    max_rows=max_rows,
+                    max_cols=max_columns,
                     line_width=None,
-                    max_colwidth=None,
+                    max_colwidth=max_colwidth,
                 )
             )
         elif isinstance(value, dict):
             for key, nested in value.items():
                 if isinstance(nested, (dict, pd.DataFrame)):
-                    print(f"\n--- {str(key).replace('_', ' ').upper()} ---")
-                    print_value(nested)
+                    lines.append(f"\n--- {str(key).replace('_', ' ').upper()} ---")
+                    format_value(nested)
                 else:
-                    print(f"{key}: {nested}")
+                    lines.append(f"{key}: {nested}")
         else:
-            print(value)
+            lines.append(str(value))
 
     for section, value in report.items():
-        print(f"\n=== {str(section).replace('_', ' ').upper()} ===")
-        print_value(value)
+        lines.append(f"\n=== {str(section).replace('_', ' ').upper()} ===")
+        format_value(value)
+    return "\n".join(lines)
+
+
+def print_report(
+    report: ProfileResult | dict[str, Any],
+    *,
+    max_rows: int = 20,
+    max_columns: int = 12,
+    max_colwidth: int = 40,
+) -> None:
+    """Print a bounded formatted report."""
+    print(
+        format_report(
+            report,
+            max_rows=max_rows,
+            max_columns=max_columns,
+            max_colwidth=max_colwidth,
+        )
+    )

@@ -20,6 +20,8 @@ Notable changes to FramePeek are recorded here.
 - Added separate infinity statistics, explicit outlier limitations, and
   diagnostics for text normalization, mixed objects, numeric identifiers, and
   rare-category concentration.
+- Added schema-versioned report metadata, explicit missing summaries, bounded
+  text formatting, and JSON-compatible serialization.
 
 ## [0.1.1] - 2026-07-24
 

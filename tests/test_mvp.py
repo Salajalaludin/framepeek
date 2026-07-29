@@ -25,6 +25,7 @@ def test_profile_contains_complete_mvp_without_mutation() -> None:
     report = fp.profile(df, target_column="churn")
 
     assert set(report) == {
+        "metadata",
         "overview",
         "columns",
         "missing",
@@ -38,7 +39,8 @@ def test_profile_contains_complete_mvp_without_mutation() -> None:
     }
     assert report["target"]["type"] == "categorical"
     assert report["target"]["imbalanced"] is True
-    assert report["missing"].attrs["rows"]["rows_with_missing"] == 1
+    assert report["missing"]["rows"]["rows_with_missing"] == 1
+    assert report["metadata"]["schema_version"] == "1.0"
     assert report["correlations"]["matrix"].shape == (2, 2)
     pd.testing.assert_frame_equal(df, original)
 
@@ -58,7 +60,7 @@ def test_print_report_adds_titles_without_truncating_or_mutating(capsys) -> None
     numeric_before = report["numeric"].copy(deep=True)
     max_colwidth_before = pd.get_option("display.max_colwidth")
 
-    fp.print_report(report)
+    fp.print_report(report, max_rows=100, max_columns=100, max_colwidth=100)
     output = capsys.readouterr().out
 
     for section in report:
@@ -132,7 +134,7 @@ def test_overview_columns_and_missing_cover_supported_types_and_severities() -> 
 
     metrics = dict(fp.overview(df).itertuples(index=False, name=None))
     column_report = fp.columns(df)
-    severities = fp.missing(df).set_index("column")["severity"]
+    severities = fp.missing(df)["columns"].set_index("column")["severity"]
 
     assert metrics["numeric_columns"] == 6
     assert metrics["boolean_columns"] == 1
@@ -492,3 +494,32 @@ def test_text_and_category_quality_warnings() -> None:
         "numeric_identifier",
         "mixed_object_types",
     } <= codes
+
+
+def test_report_formatting_and_serialization_are_bounded_and_machine_readable(
+    capsys,
+) -> None:
+    report = fp.profile(
+        pd.DataFrame(
+            {
+                "value": [1, float("inf"), float("nan")],
+                "when": pd.date_range("2025-01-01", periods=3),
+            }
+        )
+    )
+
+    text = fp.format_report(report, max_rows=1, max_columns=2, max_colwidth=8)
+    fp.print_report(report, max_rows=1, max_columns=2, max_colwidth=8)
+    serialized = fp.to_serializable(report)
+
+    assert text in capsys.readouterr().out
+    assert "..." in text
+    assert serialized["numeric"][0]["max"] == 1.0
+    assert serialized["metadata"]["schema_version"] == "1.0"
+    assert fp.to_serializable(float("inf")) == "Infinity"
+    assert fp.to_serializable(float("-inf")) == "-Infinity"
+    assert fp.to_serializable(float("nan")) is None
+    assert fp.to_serializable(pd.Timestamp("2025-01-01")) == "2025-01-01T00:00:00"
+    assert fp.to_serializable(pd.NA) is None
+    assert fp.to_serializable({"x": pd.Series([1]).iloc[0]}) == {"x": 1}
+    assert fp.to_serializable(object()).startswith("<object object")
