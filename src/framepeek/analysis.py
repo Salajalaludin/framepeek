@@ -1,13 +1,11 @@
-"""Functional API for FramePeek's first usable release."""
+"""Dataset and column analysis functions."""
 
 from __future__ import annotations
 
-from collections import Counter
-from collections.abc import Hashable, Sequence
+from collections.abc import Sequence
 from itertools import combinations
-from math import inf, isfinite, nan
-from numbers import Real
-from typing import Any, Literal, cast
+from math import inf, nan
+from typing import Any, cast
 
 import pandas as pd
 from pandas.api.types import (
@@ -16,63 +14,8 @@ from pandas.api.types import (
     is_numeric_dtype,
 )
 
-
-def _number(
-    name: str,
-    value: object,
-    *,
-    minimum: float,
-    maximum: float | None = None,
-    include_minimum: bool = True,
-) -> float:
-    if isinstance(value, bool) or not isinstance(value, Real):
-        raise TypeError(f"{name} must be a finite number.")
-    result = float(value)
-    if not isfinite(result):
-        raise ValueError(f"{name} must be a finite number.")
-    below = result < minimum if include_minimum else result <= minimum
-    if below or maximum is not None and result > maximum:
-        lower = "[" if include_minimum else "("
-        upper = str(maximum) if maximum is not None else "infinity"
-        raise ValueError(f"{name} must be within {lower}{minimum}, {upper}].")
-    return result
-
-
-def _integer(name: str, value: object, *, minimum: int) -> int:
-    if isinstance(value, bool) or not isinstance(value, int):
-        raise TypeError(f"{name} must be an integer.")
-    if value < minimum:
-        raise ValueError(f"{name} must be at least {minimum}.")
-    return value
-
-
-def _choice(name: str, value: object, choices: set[str]) -> str:
-    if not isinstance(value, str):
-        raise TypeError(f"{name} must be a string.")
-    if value not in choices:
-        expected = ", ".join(repr(choice) for choice in sorted(choices))
-        raise ValueError(f"{name} must be one of: {expected}.")
-    return value
-
-
-def validate(df: pd.DataFrame, target_column: Hashable | None = None) -> None:
-    """Validate the common DataFrame and target requirements."""
-    if not isinstance(df, pd.DataFrame):
-        raise TypeError(f"Expected pandas.DataFrame, received {type(df).__name__}.")
-    if df.empty or len(df.columns) == 0:
-        raise ValueError("DataFrame must contain at least one row and one column.")
-    if isinstance(df.columns, pd.MultiIndex):
-        raise TypeError("DataFrame columns must use a single-level Index.")
-    if df.columns.has_duplicates:
-        counts = Counter(df.columns)
-        details = ", ".join(
-            f"{name!r} ({count} occurrences)"
-            for name, count in counts.items()
-            if count > 1
-        )
-        raise ValueError(f"DataFrame columns must be unique; duplicates: {details}.")
-    if target_column is not None and target_column not in df.columns:
-        raise KeyError(f"Target column {target_column!r} was not found.")
+from .types import ColumnName, CorrelationMethod, OutlierMethod
+from .validation import _choice, _integer, _number, validate
 
 
 def _pct(value: int | float, total: int) -> float:
@@ -93,7 +36,7 @@ def _kind(series: pd.Series) -> str:
     return "other"
 
 
-def _numeric_names(df: pd.DataFrame) -> list[Hashable]:
+def _numeric_names(df: pd.DataFrame) -> list[ColumnName]:
     return [
         name
         for name in df.columns
@@ -224,7 +167,7 @@ def missing(
 
 def duplicates(
     df: pd.DataFrame,
-    subset: Sequence[Hashable] | None = None,
+    subset: Sequence[ColumnName] | None = None,
     max_examples: int = 5,
 ) -> dict[str, Any]:
     """Return duplicate totals, repeated groups, and bounded examples."""
@@ -407,7 +350,7 @@ _OUTLIER_COLUMNS = [
 
 def outliers(
     df: pd.DataFrame,
-    method: str = "iqr",
+    method: OutlierMethod = "iqr",
     multiplier: float = 1.5,
 ) -> pd.DataFrame:
     """Return IQR-based potential outlier summaries for numeric columns."""
@@ -458,7 +401,7 @@ def _strength(value: float) -> str:
 
 def correlations(
     df: pd.DataFrame,
-    method: Literal["pearson", "spearman", "kendall"] = "pearson",
+    method: CorrelationMethod = "pearson",
     threshold: float = 0,
 ) -> dict[str, pd.DataFrame]:
     """Return a numeric correlation matrix and a tidy pair table."""
@@ -504,7 +447,7 @@ def correlations(
 
 def target(
     df: pd.DataFrame,
-    target_column: Hashable,
+    target_column: ColumnName,
     imbalance_ratio: float = 3,
     *,
     _correlation_result: dict[str, pd.DataFrame] | None = None,
@@ -561,291 +504,3 @@ def target(
         ].reset_index(drop=True),
         "correlations": related,
     }
-
-
-_WARNING_COLUMNS = [
-    "code",
-    "severity",
-    "column",
-    "message",
-    "recommendation",
-    "metric",
-]
-
-
-def warnings(
-    df: pd.DataFrame,
-    target_column: Hashable | None = None,
-    missing_threshold: float = 20,
-    near_constant_ratio: float = 0.95,
-    high_cardinality_ratio: float = 0.5,
-    outlier_threshold: float = 5,
-    imbalance_ratio: float = 3,
-    *,
-    outlier_method: str = "iqr",
-    outlier_multiplier: float = 1.5,
-    _outlier_result: pd.DataFrame | None = None,
-    _target_result: dict[str, Any] | None = None,
-) -> pd.DataFrame:
-    """Return actionable data-quality warnings."""
-    validate(df, target_column)
-    _number("missing_threshold", missing_threshold, minimum=0, maximum=100)
-    _number(
-        "outlier_threshold",
-        outlier_threshold,
-        minimum=0,
-        maximum=100,
-        include_minimum=False,
-    )
-    _number(
-        "near_constant_ratio",
-        near_constant_ratio,
-        minimum=0,
-        maximum=1,
-        include_minimum=False,
-    )
-    _number(
-        "high_cardinality_ratio",
-        high_cardinality_ratio,
-        minimum=0,
-        maximum=1,
-        include_minimum=False,
-    )
-
-    rows: list[dict[str, Any]] = []
-
-    def add(
-        code: str,
-        severity: str,
-        column: Hashable | None,
-        message: str,
-        recommendation: str,
-        metric: float | int,
-    ) -> None:
-        rows.append(
-            {
-                "code": code,
-                "severity": severity,
-                "column": column,
-                "message": message,
-                "recommendation": recommendation,
-                "metric": metric,
-            }
-        )
-
-    duplicate_count = int(df.duplicated().sum())
-    if duplicate_count:
-        add(
-            "duplicate_rows",
-            "medium",
-            None,
-            f"Dataset contains {duplicate_count} duplicate rows.",
-            "Review duplicate rows before analysis.",
-            duplicate_count,
-        )
-
-    for name in df.columns:
-        series = df[name]
-        non_null = series.dropna()
-        unique = int(non_null.nunique())
-        missing_pct = _pct(series.isna().sum(), len(series))
-        if not len(non_null):
-            add(
-                "all_missing",
-                "critical",
-                name,
-                f"Column {name!r} contains only missing values.",
-                "Remove the column or restore its source data.",
-                100,
-            )
-            continue
-        if unique <= 1:
-            add(
-                "constant",
-                "high",
-                name,
-                f"Column {name!r} has no variation.",
-                "Exclude it from analyses that require variation.",
-                unique,
-            )
-        else:
-            top_ratio = float(non_null.value_counts().iloc[0] / len(non_null))
-            if top_ratio >= near_constant_ratio:
-                add(
-                    "near_constant",
-                    "medium",
-                    name,
-                    f"Column {name!r} is nearly constant.",
-                    "Check whether the rare values are meaningful.",
-                    round(top_ratio, 4),
-                )
-        if unique == len(non_null):
-            add(
-                "possible_identifier",
-                "medium",
-                name,
-                f"Column {name!r} contains only unique non-missing values.",
-                "Treat it as an identifier unless it is a measured feature.",
-                unique,
-            )
-        ratio = unique / len(non_null)
-        if _kind(series) == "categorical" and unique > 20 and ratio >= high_cardinality_ratio:
-            add(
-                "high_cardinality",
-                "medium",
-                name,
-                f"Column {name!r} has high categorical cardinality.",
-                "Review identifiers and rare categories.",
-                round(ratio, 4),
-            )
-        if missing_pct > missing_threshold:
-            add(
-                "high_missing",
-                "critical" if missing_pct > 50 else "high",
-                name,
-                f"Column {name!r} contains {missing_pct}% missing values.",
-                "Investigate the missing-data mechanism.",
-                missing_pct,
-            )
-        if _kind(series) == "categorical":
-            text = non_null.astype(str)
-            numeric_ratio = float(pd.to_numeric(text, errors="coerce").notna().mean())
-            if numeric_ratio >= 0.9:
-                add(
-                    "numeric_as_string",
-                    "medium",
-                    name,
-                    f"Column {name!r} appears numeric but is stored as text.",
-                    "Validate and convert it to a numeric dtype.",
-                    round(numeric_ratio, 4),
-                )
-            elif text.str.contains(r"[-/:]", regex=True).mean() >= 0.9:
-                date_ratio = float(
-                    pd.to_datetime(text, errors="coerce", format="mixed")
-                    .notna()
-                    .mean()
-                )
-                if date_ratio >= 0.9:
-                    add(
-                        "datetime_as_string",
-                        "medium",
-                        name,
-                        f"Column {name!r} appears to contain datetimes.",
-                        "Validate and convert it to a datetime dtype.",
-                        round(date_ratio, 4),
-                    )
-
-    outlier_result = (
-        _outlier_result
-        if _outlier_result is not None
-        else outliers(df, outlier_method, outlier_multiplier)
-    )
-    for row in outlier_result.itertuples(index=False):
-        outlier_pct = cast(float, row.outlier_pct)
-        if pd.notna(outlier_pct) and outlier_pct > outlier_threshold:
-            add(
-                "potential_outliers",
-                "medium",
-                row.column,
-                f"Column {row.column!r} contains {outlier_pct}% potential outliers.",
-                "Review them in domain context; do not remove automatically.",
-                outlier_pct,
-            )
-
-    if target_column is not None:
-        target_result = _target_result or target(
-            df, target_column, imbalance_ratio
-        )
-        if target_result["type"] == "categorical" and target_result["imbalanced"]:
-            ratio = target_result["majority_to_minority_ratio"]
-            add(
-                "class_imbalance",
-                "high",
-                target_column,
-                f"Target {target_column!r} has a majority-to-minority ratio of {ratio}.",
-                "Use stratified evaluation and imbalance-aware metrics.",
-                ratio,
-            )
-    return pd.DataFrame(rows, columns=_WARNING_COLUMNS)
-
-
-def profile(
-    df: pd.DataFrame,
-    target_column: Hashable | None = None,
-    correlation_method: Literal["pearson", "spearman", "kendall"] = "pearson",
-    outlier_method: str = "iqr",
-    outlier_multiplier: float = 1.5,
-    top_n_categories: int = 5,
-    missing_thresholds: tuple[float, float, float] = (5, 20, 50),
-    warning_missing_threshold: float = 20,
-    high_cardinality_ratio: float = 0.5,
-    imbalance_ratio: float = 3,
-) -> dict[str, Any]:
-    """Run every MVP analysis without mutating the input DataFrame."""
-    validate(df, target_column)
-    outlier_result = outliers(df, outlier_method, outlier_multiplier)
-    correlation_result = correlations(df, correlation_method)
-    target_result = (
-        target(
-            df,
-            target_column,
-            imbalance_ratio,
-            _correlation_result=correlation_result,
-            _outlier_result=outlier_result,
-        )
-        if target_column is not None
-        else None
-    )
-    return {
-        "overview": overview(df),
-        "columns": columns(df, high_cardinality_ratio),
-        "missing": missing(df, missing_thresholds),
-        "duplicates": duplicates(df),
-        "numeric": numeric(df),
-        "categorical": categorical(df, top_n_categories),
-        "outliers": outlier_result,
-        "correlations": correlation_result,
-        "target": target_result,
-        "warnings": warnings(
-            df,
-            target_column=target_column,
-            missing_threshold=warning_missing_threshold,
-            high_cardinality_ratio=high_cardinality_ratio,
-            imbalance_ratio=imbalance_ratio,
-            outlier_method=outlier_method,
-            outlier_multiplier=outlier_multiplier,
-            _outlier_result=outlier_result,
-            _target_result=target_result,
-        ),
-    }
-
-
-def print_report(report: dict[str, Any]) -> None:
-    """Print a profile report with titled, untruncated tables."""
-    if not isinstance(report, dict):
-        raise TypeError("report must be the dictionary returned by profile().")
-
-    def print_value(value: Any) -> None:
-        if isinstance(value, pd.DataFrame):
-            print(
-                value.to_string(
-                    index=False,
-                    max_rows=None,
-                    max_cols=None,
-                    line_width=None,
-                    max_colwidth=None,
-                )
-            )
-        elif isinstance(value, dict):
-            for key, nested in value.items():
-                if isinstance(nested, (dict, pd.DataFrame)):
-                    print(f"\n--- {str(key).replace('_', ' ').upper()} ---")
-                    print_value(nested)
-                else:
-                    print(f"{key}: {nested}")
-        else:
-            print(value)
-
-    for section, value in report.items():
-        print(f"\n=== {str(section).replace('_', ' ').upper()} ===")
-        print_value(value)

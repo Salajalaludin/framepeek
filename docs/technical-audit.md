@@ -40,16 +40,16 @@
 
 ### Struktur package
 
-25. Pecah `core.py` berdasarkan tanggung jawab analisis.
-26. Pisahkan modul validasi dan helper internal.
+- [x] 25. Pecah `core.py` berdasarkan tanggung jawab analisis.
+- [x] 26. Pisahkan modul validasi dan helper internal.
 27. Pisahkan analisis overview dan metadata kolom.
 28. Pisahkan missing dan duplicate analysis.
 29. Pisahkan numeric, categorical, dan outlier analysis.
 30. Pisahkan correlation dan target analysis.
-31. Pisahkan data-quality warnings.
+- [x] 31. Pisahkan data-quality warnings.
 32. Pisahkan report formatting dan serialization.
-33. Pertahankan satu public API melalui `framepeek/__init__.py`.
-34. Hindari terlalu banyak modul kecil yang hanya berisi satu helper sederhana.
+- [x] 33. Pertahankan satu public API melalui `framepeek/__init__.py`.
+- [x] 34. Hindari terlalu banyak modul kecil yang hanya berisi satu helper sederhana.
 35. Tegaskan bahwa modul dengan awalan underscore merupakan API internal.
 
 Struktur logis yang perlu tersedia:
@@ -73,10 +73,10 @@ Struktur logis yang perlu tersedia:
 - [x] 37. Pastikan `py.typed` benar-benar masuk ke wheel dan source distribution.
 38. Tambahkan tipe hasil terstruktur untuk report, correlations, duplicates, target, dan warnings.
 39. Kurangi penggunaan `Any` pada return type publik.
-40. Gunakan `Literal` untuk metode yang hanya menerima pilihan tertentu.
-41. Gunakan tipe khusus untuk correlation method, outlier method, target type, dan severity.
+- [x] 40. Gunakan `Literal` untuk metode yang hanya menerima pilihan tertentu.
+41. Gunakan tipe khusus untuk correlation method, outlier method, target type, dan severity. *(Correlation method, outlier method, dan severity selesai; target type menunggu item 42.)*
 42. Tambahkan `target_type` dengan pilihan otomatis, kategorikal, atau numerik.
-43. Tambahkan tipe yang jelas untuk nama kolom yang dapat berupa objek hashable selain string.
+- [x] 43. Tambahkan tipe yang jelas untuk nama kolom yang dapat berupa objek hashable selain string.
 44. Pastikan overload atau union hasil target dapat dibedakan dari field `type`.
 45. Jalankan type checking terhadap public API, bukan hanya implementasi internal.
 
@@ -182,7 +182,7 @@ Struktur logis yang perlu tersedia:
 
 - [x] 8. Buat validation helpers.
 9. Buat analysis context.
-10. Pecah `core.py`.
+- [x] 10. Pecah `core.py`.
 11. Tambahkan typed result.
 12. Pisahkan formatting dari printing.
 13. Tambahkan serialization.
@@ -194,3 +194,22 @@ Struktur logis yang perlu tersedia:
 16. Benchmark suite.
 17. Optimasi reuse metadata per kolom.
 18. Tambahkan missing-pattern dan non-finite analysis.
+
+## Refactor struktur package
+
+Struktur minimal yang diterapkan:
+
+```text
+src/framepeek/
+├── __init__.py
+├── types.py
+├── validation.py
+├── analysis.py
+├── warnings.py
+└── report.py
+```
+
+- [x] Public API tetap diekspor melalui `framepeek/__init__.py`.
+- [x] `core.py` dihapus setelah tanggung jawabnya dipindahkan.
+- [x] Tidak ada modul satu-fungsi.
+- [x] `serialization.py` ditunda sampai fitur serialization dikerjakan.
