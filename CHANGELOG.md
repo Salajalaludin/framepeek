@@ -17,6 +17,9 @@ Notable changes to FramePeek are recorded here.
   throughout each `profile()` call.
 - Added public structured result types and explicit target interpretation
   through `target_type`.
+- Added separate infinity statistics, explicit outlier limitations, and
+  diagnostics for text normalization, mixed objects, numeric identifiers, and
+  rare-category concentration.
 
 ## [0.1.1] - 2026-07-24
 

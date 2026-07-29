@@ -13,7 +13,7 @@ from .types import (
     TargetResult,
     WarningsResult,
 )
-from .validation import _number, validate
+from .validation import _integer, _number, validate
 
 _WARNING_COLUMNS = [
     "code",
@@ -33,6 +33,8 @@ def warnings(
     high_cardinality_ratio: float = 0.5,
     outlier_threshold: float = 5,
     imbalance_ratio: float = 3,
+    rare_max_count: int = 1,
+    rare_concentration_ratio: float = 0.1,
     *,
     outlier_method: OutlierMethod = "iqr",
     outlier_multiplier: float = 1.5,
@@ -48,6 +50,14 @@ def warnings(
         outlier_threshold,
         minimum=0,
         maximum=100,
+        include_minimum=False,
+    )
+    _integer("rare_max_count", rare_max_count, minimum=1)
+    _number(
+        "rare_concentration_ratio",
+        rare_concentration_ratio,
+        minimum=0,
+        maximum=1,
         include_minimum=False,
     )
     _number(
@@ -87,7 +97,10 @@ def warnings(
             }
         )
 
-    duplicate_count = int(df.duplicated().sum())
+    try:
+        duplicate_count = int(df.duplicated().sum())
+    except TypeError:
+        duplicate_count = int(df.map(repr).duplicated().sum())
     if duplicate_count:
         add(
             "duplicate_rows",
@@ -169,7 +182,24 @@ def warnings(
         if metadata.kind == "categorical":
             text = non_null.astype(str)
             numeric_ratio = float(pd.to_numeric(text, errors="coerce").notna().mean())
-            if numeric_ratio >= 0.9:
+            numeric_identifier = numeric_ratio >= 0.9 and (
+                (
+                    metadata.unique == metadata.non_null
+                    and text.str.len().nunique() == 1
+                    and int(text.str.len().iloc[0]) >= 5
+                )
+                or text.str.fullmatch(r"0\d+").any()
+            )
+            if numeric_identifier:
+                add(
+                    "numeric_identifier",
+                    "medium",
+                    name,
+                    f"Column {name!r} appears to contain numeric identifiers.",
+                    "Keep identifiers as text unless arithmetic is meaningful.",
+                    round(numeric_ratio, 4),
+                )
+            elif numeric_ratio >= 0.9:
                 add(
                     "numeric_as_string",
                     "medium",
@@ -193,6 +223,71 @@ def warnings(
                         "Validate and convert it to a datetime dtype.",
                         round(date_ratio, 4),
                     )
+            empty_count = int(text.eq("").sum())
+            whitespace_count = int(text.str.fullmatch(r"\s+").sum())
+            if empty_count or whitespace_count:
+                add(
+                    "empty_string",
+                    "medium",
+                    name,
+                    f"Column {name!r} contains empty or whitespace-only values.",
+                    "Normalize them to an explicit missing-value representation.",
+                    empty_count + whitespace_count,
+                )
+            trimmed = text.str.strip()
+            trim_count = int(text.ne(trimmed).sum())
+            if trim_count:
+                add(
+                    "surrounding_whitespace",
+                    "medium",
+                    name,
+                    f"Column {name!r} contains leading or trailing whitespace.",
+                    "Trim values after confirming whitespace is not meaningful.",
+                    trim_count,
+                )
+            if trimmed.nunique() > trimmed.str.casefold().nunique():
+                add(
+                    "category_case",
+                    "medium",
+                    name,
+                    f"Column {name!r} contains categories differing only by case.",
+                    "Standardize case when those categories are equivalent.",
+                    trimmed.nunique() - trimmed.str.casefold().nunique(),
+                )
+            rare_count = int(
+                metadata.value_counts[metadata.value_counts.le(rare_max_count)].sum()
+            )
+            rare_ratio = rare_count / metadata.non_null
+            if rare_ratio >= rare_concentration_ratio:
+                add(
+                    "rare_category_concentration",
+                    "medium",
+                    name,
+                    f"Column {name!r} has many rows in rare categories.",
+                    "Review or group rare categories in domain context.",
+                    round(rare_ratio, 4),
+                )
+            if series.dtype == object and non_null.map(type).nunique() > 1:
+                add(
+                    "mixed_object_types",
+                    "high",
+                    name,
+                    f"Column {name!r} contains mixed Python object types.",
+                    "Validate and normalize values before analysis.",
+                    int(non_null.map(type).nunique()),
+                )
+
+        if metadata.kind == "numeric":
+            non_finite = int(series.isin([float("inf"), -float("inf")]).sum())
+            if non_finite:
+                add(
+                    "non_finite_values",
+                    "high",
+                    name,
+                    f"Column {name!r} contains infinite numeric values.",
+                    "Investigate their source separately from missing values.",
+                    non_finite,
+                )
 
     outlier_result = (
         _outlier_result

@@ -221,6 +221,10 @@ _NUMERIC_COLUMNS = [
     "count",
     "missing",
     "missing_pct",
+    "non_finite",
+    "non_finite_pct",
+    "positive_infinity",
+    "negative_infinity",
     "mean",
     "median",
     "mode",
@@ -253,7 +257,11 @@ def numeric(
     context = _get_context(df, _context)
     rows: list[dict[str, Any]] = []
     for name in context.numeric_names:
-        clean = df[name].replace([inf, -inf], nan).dropna()
+        series = df[name]
+        positive_infinity = int(series.eq(inf).sum())
+        negative_infinity = int(series.eq(-inf).sum())
+        non_finite = positive_infinity + negative_infinity
+        clean = series.replace([inf, -inf], nan).dropna()
         count = len(clean)
         mode = clean.mode()
         mean = clean.mean() if count else nan
@@ -267,8 +275,12 @@ def numeric(
             {
                 "column": name,
                 "count": count,
-                "missing": len(df) - count,
-                "missing_pct": _pct(len(df) - count, len(df)),
+                "missing": context.columns[name].missing,
+                "missing_pct": _pct(context.columns[name].missing, len(df)),
+                "non_finite": non_finite,
+                "non_finite_pct": _pct(non_finite, len(df)),
+                "positive_infinity": positive_infinity,
+                "negative_infinity": negative_infinity,
                 "mean": mean,
                 "median": q2,
                 "mode": mode.iloc[0] if not mode.empty else nan,
@@ -365,6 +377,9 @@ _OUTLIER_COLUMNS = [
     "upper_outliers",
     "min_outlier",
     "max_outlier",
+    "sample_size",
+    "applicable",
+    "limitation",
 ]
 
 
@@ -372,6 +387,7 @@ def outliers(
     df: pd.DataFrame,
     method: OutlierMethod = "iqr",
     multiplier: float = 1.5,
+    min_samples: int = 4,
     *,
     _context: AnalysisContext | None = None,
 ) -> pd.DataFrame:
@@ -379,15 +395,40 @@ def outliers(
     validate(df)
     _choice("method", method, {"iqr"})
     _number("multiplier", multiplier, minimum=0, include_minimum=False)
+    _integer("min_samples", min_samples, minimum=1)
     context = _get_context(df, _context)
     rows: list[dict[str, Any]] = []
     for name in context.numeric_names:
         clean = df[name].replace([inf, -inf], nan).dropna()
-        if clean.empty:
-            rows.append({"column": name})
+        if len(clean) < min_samples:
+            rows.append(
+                {
+                    "column": name,
+                    "sample_size": len(clean),
+                    "applicable": False,
+                    "limitation": "insufficient_sample",
+                }
+            )
             continue
         q1, q3 = clean.quantile([0.25, 0.75])
         iqr = q3 - q1
+        if iqr == 0:
+            rows.append(
+                {
+                    "column": name,
+                    "q1": q1,
+                    "q3": q3,
+                    "iqr": iqr,
+                    "outlier_count": 0,
+                    "outlier_pct": 0.0,
+                    "lower_outliers": 0,
+                    "upper_outliers": 0,
+                    "sample_size": len(clean),
+                    "applicable": False,
+                    "limitation": "zero_iqr",
+                }
+            )
+            continue
         lower, upper = q1 - multiplier * iqr, q3 + multiplier * iqr
         lower_values, upper_values = clean[clean < lower], clean[clean > upper]
         values = pd.concat([lower_values, upper_values])
@@ -405,6 +446,9 @@ def outliers(
                 "upper_outliers": len(upper_values),
                 "min_outlier": values.min() if not values.empty else nan,
                 "max_outlier": values.max() if not values.empty else nan,
+                "sample_size": len(clean),
+                "applicable": True,
+                "limitation": None,
             }
         )
     return pd.DataFrame(rows, columns=_OUTLIER_COLUMNS)
@@ -426,6 +470,7 @@ def correlations(
     df: pd.DataFrame,
     method: CorrelationMethod = "pearson",
     threshold: float = 0,
+    min_periods: int = 2,
     *,
     _context: AnalysisContext | None = None,
 ) -> CorrelationResult:
@@ -433,9 +478,10 @@ def correlations(
     validate(df)
     _choice("method", method, {"pearson", "spearman", "kendall"})
     _number("threshold", threshold, minimum=0, maximum=1)
+    _integer("min_periods", min_periods, minimum=2)
     names = _get_context(df, _context).numeric_names
     clean = df[names].replace([inf, -inf], nan)
-    matrix = clean.corr(method=method)
+    matrix = clean.corr(method=method, min_periods=min_periods)
     rows = []
     for left_index, right_index in combinations(range(len(names)), 2):
         left, right = names[left_index], names[right_index]

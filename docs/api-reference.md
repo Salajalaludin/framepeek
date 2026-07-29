@@ -104,11 +104,12 @@ Returns one `DataFrame` row per categorical or boolean column with cardinality,
 the leading value, top values, and rare/singleton counts. `top_n` must be a
 positive integer and `rare_max_count` must be at least one.
 
-### `outliers(df, method="iqr", multiplier=1.5)`
+### `outliers(df, method="iqr", multiplier=1.5, min_samples=4)`
 
 Returns one `DataFrame` row per numeric, non-boolean column with IQR bounds and
 potential outlier counts. `method` must be `iqr`; `multiplier` must be positive.
 Results are diagnostic and do not remove values.
+`applicable` and `limitation` explain insufficient samples or a zero IQR.
 
 ### `correlations(df, method="pearson", threshold=0)`
 
@@ -157,6 +158,13 @@ Returns a `DataFrame` with `code`, `severity`, `column`, `message`,
 | `datetime_as_string` | At least 90% of date-like text values parse as datetimes. |
 | `potential_outliers` | IQR outlier percentage exceeds `outlier_threshold`. |
 | `class_imbalance` | A categorical target meets `imbalance_ratio`. |
+| `non_finite_values` | A numeric column contains positive or negative infinity. |
+| `numeric_identifier` | Numeric-looking text appears identifier-like. |
+| `empty_string` | Text contains empty or whitespace-only values. |
+| `surrounding_whitespace` | Text contains leading or trailing whitespace. |
+| `category_case` | Categories differ only by letter case. |
+| `mixed_object_types` | An object column contains mixed Python value types. |
+| `rare_category_concentration` | Rare categories collectively meet the configured row-share ratio. |
 
 `missing_threshold` and `outlier_threshold` use percentage values.
 `near_constant_ratio` and `high_cardinality_ratio` must be within `(0, 1]`;

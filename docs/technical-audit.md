@@ -111,21 +111,21 @@ Struktur logis yang perlu tersedia:
 
 ### Ketepatan statistik dan data quality
 
-69. Bedakan missing value dari positive dan negative infinity.
-70. Tambahkan statistik dan warning untuk non-finite numeric values.
-71. Pastikan infinity tidak dihitung sebagai missing.
-72. Tangani IQR bernilai nol secara eksplisit.
-73. Tandai keterbatasan outlier detection pada kolom constant atau near-constant.
-74. Tambahkan minimum sample size untuk skewness, kurtosis, korelasi, dan outlier detection.
+- [x] 69. Bedakan missing value dari positive dan negative infinity.
+- [x] 70. Tambahkan statistik dan warning untuk non-finite numeric values.
+- [x] 71. Pastikan infinity tidak dihitung sebagai missing.
+- [x] 72. Tangani IQR bernilai nol secara eksplisit.
+- [x] 73. Tandai keterbatasan outlier detection pada kolom constant atau near-constant.
+- [x] 74. Tambahkan minimum sample size untuk skewness, kurtosis, korelasi, dan outlier detection.
 - [x] 75. Jangan otomatis menganggap target numerik dengan sedikit nilai unik sebagai kategorikal tanpa opsi override.
-76. Tambahkan deteksi numeric identifier agar nomor telepon, kode pos, NIK, dan kode produk tidak mudah dianggap numeric-as-string.
-77. Tambahkan deteksi empty string dan whitespace-only values.
-78. Tambahkan deteksi perbedaan kapitalisasi kategori.
-79. Tambahkan deteksi leading atau trailing whitespace.
-80. Tambahkan deteksi mixed Python object types.
+- [x] 76. Tambahkan deteksi numeric identifier agar nomor telepon, kode pos, NIK, dan kode produk tidak mudah dianggap numeric-as-string.
+- [x] 77. Tambahkan deteksi empty string dan whitespace-only values.
+- [x] 78. Tambahkan deteksi perbedaan kapitalisasi kategori.
+- [x] 79. Tambahkan deteksi leading atau trailing whitespace.
+- [x] 80. Tambahkan deteksi mixed Python object types.
 81. Tambahkan analisis missingness pattern antar-kolom.
-82. Tambahkan rare-category concentration warning sesuai audit yang sudah dibuat.
-83. Pastikan semua warning menyertakan kode, severity, metric, pesan, dan rekomendasi yang stabil.
+- [x] 82. Tambahkan rare-category concentration warning sesuai audit yang sudah dibuat.
+- [x] 83. Pastikan semua warning menyertakan kode, severity, metric, pesan, dan rekomendasi yang stabil.
 84. Dokumentasikan bahwa strength label pada korelasi merupakan heuristik, bukan aturan universal.
 
 ### Report dan serialization
@@ -151,12 +151,12 @@ Struktur logis yang perlu tersedia:
 100. Test tipe pandas nullable seperti `Int64`, `Float64`, `boolean`, dan `string`.
 101. Test datetime dengan timezone, timedelta, category, dan Arrow-backed string.
 102. Test semua NaN, semua infinity, campuran NaN dan infinity, serta satu nilai valid.
-103. Test kolom constant dan IQR nol.
+- [x] 103. Test kolom constant dan IQR nol.
 104. Test DataFrame dengan satu baris dan satu kolom.
 105. Test nama kolom integer, tuple, dan tipe hashable lain.
 - [x] 106. Test duplicate column diagnostics.
-107. Test object column berisi campuran string, list, dictionary, dan angka.
-108. Test numeric identifier agar tidak salah diklasifikasikan.
+- [x] 107. Test object column berisi campuran string, list, dictionary, dan angka.
+- [x] 108. Test numeric identifier agar tidak salah diklasifikasikan.
 109. Test sampling menghasilkan hasil reproducible.
 110. Test serialization terhadap seluruh tipe output.
 111. Test bahwa input DataFrame tidak berubah setelah semua fungsi dipanggil.
