@@ -34,6 +34,8 @@ Notable changes to FramePeek are recorded here.
   measurement.
 - Added `quality_warnings` as the recommended compatibility-preserving name and
   advanced the report schema to 1.1.
+- Added development-only Arrow dtype coverage and bounded property-based tests
+  for numeric, missingness, correlation-schema, and non-mutation invariants.
 
 ## [0.1.1] - 2026-07-24
 
