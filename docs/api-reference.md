@@ -8,7 +8,8 @@ otherwise. Numeric configuration rejects booleans, `NaN`, and infinity.
 The supported public API is exported from `framepeek`. Implementation is
 grouped into `analysis`, `validation`, `warnings`, and `report`; configuration
 aliases `ColumnName`, `CorrelationMethod`, `OutlierMethod`, and `Severity` are
-also public.
+also public. Modules prefixed with `_`, including `_context`, are internal and
+not part of the compatibility contract.
 
 ## Full report
 

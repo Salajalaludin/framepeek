@@ -32,9 +32,9 @@
 ### Reuse hasil dan internal analysis context
 
 - [x] 19. Tambahkan mekanisme internal untuk menyimpan hasil perhitungan yang sudah dilakukan selama satu pemanggilan `profile()`.
-20. Simpan daftar kolom numerik, kategorikal, boolean, datetime, dan tipe lainnya sekali saja.
-21. Simpan missing count, unique count, non-null count, dan value counts yang digunakan berulang.
-22. Izinkan `warnings()` menerima hasil outlier, target, dan metadata kolom yang sudah dihitung.
+- [x] 20. Simpan daftar kolom numerik, kategorikal, boolean, datetime, dan tipe lainnya sekali saja.
+- [x] 21. Simpan missing count, unique count, non-null count, dan value counts yang digunakan berulang.
+- [x] 22. Izinkan `warnings()` menerima hasil outlier, target, dan metadata kolom yang sudah dihitung.
 - [x] 23. Izinkan analisis target numerik menerima hasil korelasi yang sudah dihitung.
 - [x] 24. Pastikan cache hanya berlaku dalam satu proses analisis dan tidak menyebabkan state global.
 
@@ -50,7 +50,7 @@
 32. Pisahkan report formatting dan serialization.
 - [x] 33. Pertahankan satu public API melalui `framepeek/__init__.py`.
 - [x] 34. Hindari terlalu banyak modul kecil yang hanya berisi satu helper sederhana.
-35. Tegaskan bahwa modul dengan awalan underscore merupakan API internal.
+- [x] 35. Tegaskan bahwa modul dengan awalan underscore merupakan API internal.
 
 Struktur logis yang perlu tersedia:
 
@@ -96,8 +96,8 @@ Struktur logis yang perlu tersedia:
 54. Gunakan random state yang konsisten jika sampling dilakukan secara acak.
 55. Catat dalam hasil atau metadata ketika analisis menggunakan sample.
 56. Hindari parsing datetime seluruh kolom hanya untuk menghasilkan warning.
-57. Hindari `value_counts()` berulang untuk kolom yang sama.
-58. Hindari `nunique()` berulang untuk kolom yang sama.
+- [x] 57. Hindari `value_counts()` berulang untuk kolom yang sama.
+- [x] 58. Hindari `nunique()` berulang untuk kolom yang sama.
 59. Hindari penghitungan deep memory bila pengguna tidak membutuhkannya.
 60. Tambahkan pilihan subset kolom untuk `correlations()`.
 61. Tambahkan batas maksimum kolom numerik untuk analisis korelasi.
@@ -181,7 +181,7 @@ Struktur logis yang perlu tersedia:
 ### Refactor berikutnya
 
 - [x] 8. Buat validation helpers.
-9. Buat analysis context.
+- [x] 9. Buat analysis context.
 - [x] 10. Pecah `core.py`.
 11. Tambahkan typed result.
 12. Pisahkan formatting dari printing.
@@ -192,7 +192,7 @@ Struktur logis yang perlu tersedia:
 14. Sampling untuk parsing heuristik.
 15. Correlation subset dan safeguards.
 16. Benchmark suite.
-17. Optimasi reuse metadata per kolom.
+- [x] 17. Optimasi reuse metadata per kolom.
 18. Tambahkan missing-pattern dan non-finite analysis.
 
 ## Refactor struktur package

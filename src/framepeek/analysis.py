@@ -8,12 +8,8 @@ from math import inf, nan
 from typing import Any, cast
 
 import pandas as pd
-from pandas.api.types import (
-    is_bool_dtype,
-    is_datetime64_any_dtype,
-    is_numeric_dtype,
-)
 
+from ._context import AnalysisContext, column_kind
 from .types import ColumnName, CorrelationMethod, OutlierMethod
 from .validation import _choice, _integer, _number, validate
 
@@ -22,36 +18,31 @@ def _pct(value: int | float, total: int) -> float:
     return round(float(value) / total * 100, 2) if total else 0.0
 
 
-def _kind(series: pd.Series) -> str:
-    if is_bool_dtype(series.dtype):
-        return "boolean"
-    if is_numeric_dtype(series.dtype):
-        return "numeric"
-    if is_datetime64_any_dtype(series.dtype):
-        return "datetime"
-    if isinstance(series.dtype, pd.CategoricalDtype) or series.dtype == object:
-        return "categorical"
-    if isinstance(series.dtype, pd.StringDtype):
-        return "categorical"
-    return "other"
+_kind = column_kind
 
 
-def _numeric_names(df: pd.DataFrame) -> list[ColumnName]:
-    return [
-        name
-        for name in df.columns
-        if is_numeric_dtype(df[name].dtype) and not is_bool_dtype(df[name].dtype)
-    ]
+def _get_context(
+    df: pd.DataFrame,
+    context: AnalysisContext | None,
+) -> AnalysisContext:
+    return context or AnalysisContext.from_frame(df)
 
 
-def overview(df: pd.DataFrame) -> pd.DataFrame:
+def overview(
+    df: pd.DataFrame,
+    *,
+    _context: AnalysisContext | None = None,
+) -> pd.DataFrame:
     """Return dataset-level size, quality, memory, and type metrics."""
     validate(df)
     rows, column_count = df.shape
     total_cells = rows * column_count
     missing_cells = int(df.isna().sum().sum())
     duplicate_rows = int(df.duplicated().sum())
-    kinds = pd.Series([_kind(df[name]) for name in df.columns]).value_counts()
+    context = _get_context(df, _context)
+    kinds = pd.Series(
+        [metadata.kind for metadata in context.columns.values()]
+    ).value_counts()
     metrics = {
         "rows": rows,
         "columns": column_count,
@@ -70,7 +61,12 @@ def overview(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(metrics.items(), columns=["metric", "value"])
 
 
-def columns(df: pd.DataFrame, high_cardinality_ratio: float = 0.5) -> pd.DataFrame:
+def columns(
+    df: pd.DataFrame,
+    high_cardinality_ratio: float = 0.5,
+    *,
+    _context: AnalysisContext | None = None,
+) -> pd.DataFrame:
     """Return one structural and quality summary row per column."""
     validate(df)
     _number(
@@ -81,15 +77,16 @@ def columns(df: pd.DataFrame, high_cardinality_ratio: float = 0.5) -> pd.DataFra
         include_minimum=False,
     )
 
+    context = _get_context(df, _context)
     rows: list[dict[str, Any]] = []
     for name in df.columns:
         series = df[name]
-        non_null = int(series.notna().sum())
-        unique = int(series.nunique(dropna=True))
-        counts = series.value_counts(dropna=True)
+        metadata = context.columns[name]
+        non_null, unique = metadata.non_null, metadata.unique
+        counts = metadata.value_counts
         top = counts.index[0] if not counts.empty else None
         top_frequency = int(counts.iloc[0]) if not counts.empty else 0
-        kind = _kind(series)
+        kind = metadata.kind
         unique_ratio = unique / non_null if non_null else 0.0
         rows.append(
             {
@@ -119,6 +116,8 @@ def columns(df: pd.DataFrame, high_cardinality_ratio: float = 0.5) -> pd.DataFra
 def missing(
     df: pd.DataFrame,
     thresholds: tuple[float, float, float] = (5, 20, 50),
+    *,
+    _context: AnalysisContext | None = None,
 ) -> pd.DataFrame:
     """Return per-column missingness; row-level totals live in ``result.attrs``."""
     validate(df)
@@ -131,7 +130,10 @@ def missing(
     if not low < moderate < high:
         raise ValueError("thresholds must be strictly increasing.")
 
-    counts = df.isna().sum()
+    context = _get_context(df, _context)
+    counts = pd.Series(
+        {name: metadata.missing for name, metadata in context.columns.items()}
+    )
     result = pd.DataFrame(
         {
             "column": df.columns,
@@ -231,11 +233,16 @@ _NUMERIC_COLUMNS = [
 ]
 
 
-def numeric(df: pd.DataFrame) -> pd.DataFrame:
+def numeric(
+    df: pd.DataFrame,
+    *,
+    _context: AnalysisContext | None = None,
+) -> pd.DataFrame:
     """Return descriptive statistics for numeric, non-boolean columns."""
     validate(df)
+    context = _get_context(df, _context)
     rows: list[dict[str, Any]] = []
-    for name in _numeric_names(df):
+    for name in context.numeric_names:
         clean = df[name].replace([inf, -inf], nan).dropna()
         count = len(clean)
         mode = clean.mode()
@@ -297,19 +304,22 @@ def categorical(
     df: pd.DataFrame,
     top_n: int = 5,
     rare_max_count: int = 1,
+    *,
+    _context: AnalysisContext | None = None,
 ) -> pd.DataFrame:
     """Return frequency and cardinality summaries for categorical columns."""
     validate(df)
     _integer("top_n", top_n, minimum=1)
     _integer("rare_max_count", rare_max_count, minimum=1)
+    context = _get_context(df, _context)
     rows: list[dict[str, Any]] = []
     for name in df.columns:
         series = df[name]
-        if _kind(series) not in {"categorical", "boolean"}:
+        metadata = context.columns[name]
+        if metadata.kind not in {"categorical", "boolean"}:
             continue
-        counts = series.value_counts(dropna=True)
-        non_null = int(series.notna().sum())
-        unique = len(counts)
+        counts = metadata.value_counts
+        non_null, unique = metadata.non_null, metadata.unique
         rows.append(
             {
                 "column": name,
@@ -352,13 +362,16 @@ def outliers(
     df: pd.DataFrame,
     method: OutlierMethod = "iqr",
     multiplier: float = 1.5,
+    *,
+    _context: AnalysisContext | None = None,
 ) -> pd.DataFrame:
     """Return IQR-based potential outlier summaries for numeric columns."""
     validate(df)
     _choice("method", method, {"iqr"})
     _number("multiplier", multiplier, minimum=0, include_minimum=False)
+    context = _get_context(df, _context)
     rows: list[dict[str, Any]] = []
-    for name in _numeric_names(df):
+    for name in context.numeric_names:
         clean = df[name].replace([inf, -inf], nan).dropna()
         if clean.empty:
             rows.append({"column": name})
@@ -403,12 +416,14 @@ def correlations(
     df: pd.DataFrame,
     method: CorrelationMethod = "pearson",
     threshold: float = 0,
+    *,
+    _context: AnalysisContext | None = None,
 ) -> dict[str, pd.DataFrame]:
     """Return a numeric correlation matrix and a tidy pair table."""
     validate(df)
     _choice("method", method, {"pearson", "spearman", "kendall"})
     _number("threshold", threshold, minimum=0, maximum=1)
-    names = _numeric_names(df)
+    names = _get_context(df, _context).numeric_names
     clean = df[names].replace([inf, -inf], nan)
     matrix = clean.corr(method=method)
     rows = []
@@ -452,6 +467,7 @@ def target(
     *,
     _correlation_result: dict[str, pd.DataFrame] | None = None,
     _outlier_result: pd.DataFrame | None = None,
+    _context: AnalysisContext | None = None,
 ) -> dict[str, Any]:
     """Return a categorical or numeric target summary."""
     validate(df, target_column)
@@ -461,13 +477,17 @@ def target(
         minimum=1,
         include_minimum=False,
     )
+    context = _get_context(df, _context)
     series = df[target_column]
     clean = series.dropna()
-    categorical_target = _kind(series) in {"categorical", "boolean"} or (
-        clean.nunique() <= 20
+    categorical_target = context.columns[target_column].kind in {
+        "categorical",
+        "boolean",
+    } or (
+        context.columns[target_column].unique <= 20
     )
     if categorical_target:
-        counts = clean.value_counts(dropna=True)
+        counts = context.columns[target_column].value_counts
         distribution = counts.rename("count").to_frame()
         distribution["percentage"] = [
             _pct(int(value), len(clean)) for value in counts.to_numpy()

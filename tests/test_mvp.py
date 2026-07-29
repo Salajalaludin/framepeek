@@ -409,3 +409,20 @@ def test_validation_error_classes_distinguish_input_column_and_configuration() -
         fp.target(sample(), "unknown")
     with pytest.raises(ValueError):
         fp.correlations(sample(), threshold=2)
+
+
+def test_profile_builds_column_metadata_once(monkeypatch) -> None:
+    original = core.AnalysisContext.from_frame
+    calls = 0
+
+    def count_context(df):
+        nonlocal calls
+        calls += 1
+        return original(df)
+
+    monkeypatch.setattr(core.AnalysisContext, "from_frame", count_context)
+
+    report = fp.profile(sample(), target_column="churn")
+
+    assert calls == 1
+    assert report["columns"].set_index("column").loc["city", "missing"] == 1

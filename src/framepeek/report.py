@@ -5,6 +5,7 @@ from typing import Any
 import pandas as pd
 
 from . import analysis
+from ._context import AnalysisContext
 from .types import ColumnName, CorrelationMethod, OutlierMethod
 from .validation import validate
 from .warnings import warnings
@@ -24,10 +25,13 @@ def profile(
 ) -> dict[str, Any]:
     """Run every MVP analysis without mutating the input DataFrame."""
     validate(df, target_column)
+    context = AnalysisContext.from_frame(df)
     outlier_result = analysis.outliers(
-        df, outlier_method, outlier_multiplier
+        df, outlier_method, outlier_multiplier, _context=context
     )
-    correlation_result = analysis.correlations(df, correlation_method)
+    correlation_result = analysis.correlations(
+        df, correlation_method, _context=context
+    )
     target_result = (
         analysis.target(
             df,
@@ -35,17 +39,24 @@ def profile(
             imbalance_ratio,
             _correlation_result=correlation_result,
             _outlier_result=outlier_result,
+            _context=context,
         )
         if target_column is not None
         else None
     )
     return {
-        "overview": analysis.overview(df),
-        "columns": analysis.columns(df, high_cardinality_ratio),
-        "missing": analysis.missing(df, missing_thresholds),
+        "overview": analysis.overview(df, _context=context),
+        "columns": analysis.columns(
+            df, high_cardinality_ratio, _context=context
+        ),
+        "missing": analysis.missing(
+            df, missing_thresholds, _context=context
+        ),
         "duplicates": analysis.duplicates(df),
-        "numeric": analysis.numeric(df),
-        "categorical": analysis.categorical(df, top_n_categories),
+        "numeric": analysis.numeric(df, _context=context),
+        "categorical": analysis.categorical(
+            df, top_n_categories, _context=context
+        ),
         "outliers": outlier_result,
         "correlations": correlation_result,
         "target": target_result,
@@ -59,6 +70,7 @@ def profile(
             outlier_multiplier=outlier_multiplier,
             _outlier_result=outlier_result,
             _target_result=target_result,
+            _context=context,
         ),
     }
 
