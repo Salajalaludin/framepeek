@@ -47,7 +47,7 @@
 29. Pisahkan numeric, categorical, dan outlier analysis.
 30. Pisahkan correlation dan target analysis.
 - [x] 31. Pisahkan data-quality warnings.
-32. Pisahkan report formatting dan serialization.
+- [x] 32. Pisahkan report formatting dan serialization.
 - [x] 33. Pertahankan satu public API melalui `framepeek/__init__.py`.
 - [x] 34. Hindari terlalu banyak modul kecil yang hanya berisi satu helper sederhana.
 - [x] 35. Tegaskan bahwa modul dengan awalan underscore merupakan API internal.
@@ -85,8 +85,8 @@ Struktur logis yang perlu tersedia:
 - [x] 46. Tambahkan `framepeek.__version__`.
 - [x] 47. Ambil versi dari package metadata agar tidak terjadi duplikasi sumber versi.
 - [x] 48. Tambahkan test yang memastikan versi runtime sama dengan versi distribution.
-49. Tambahkan informasi versi ke report metadata bila berguna untuk reproducibility.
-50. Tambahkan informasi versi pandas dan Python secara opsional untuk debugging report.
+- [x] 49. Tambahkan informasi versi ke report metadata bila berguna untuk reproducibility.
+- [x] 50. Tambahkan informasi versi pandas dan Python secara opsional untuk debugging report.
 
 ### Performa
 
@@ -130,16 +130,16 @@ Struktur logis yang perlu tersedia:
 
 ### Report dan serialization
 
-85. Pisahkan proses formatting report dari proses mencetak ke terminal.
-86. Tambahkan hasil report dalam bentuk string.
-87. Tambahkan batas baris, kolom, dan panjang cell untuk output terminal.
-88. Jangan selalu mencetak seluruh isi report tanpa batas.
-89. Tambahkan export machine-readable.
-90. Pastikan export menangani DataFrame, timestamp, NumPy scalar, missing value, dan infinity.
-91. Jangan menyimpan informasi penting hanya di `DataFrame.attrs`.
-92. Ubah hasil missing analysis menjadi struktur yang secara eksplisit memisahkan statistik per kolom dan per baris.
-93. Tambahkan metadata report mengenai sampling, konfigurasi, versi, dan waktu analisis.
-94. Tentukan schema report yang stabil dan terdokumentasi.
+- [x] 85. Pisahkan proses formatting report dari proses mencetak ke terminal.
+- [x] 86. Tambahkan hasil report dalam bentuk string.
+- [x] 87. Tambahkan batas baris, kolom, dan panjang cell untuk output terminal.
+- [x] 88. Jangan selalu mencetak seluruh isi report tanpa batas.
+- [x] 89. Tambahkan export machine-readable.
+- [x] 90. Pastikan export menangani DataFrame, timestamp, NumPy scalar, missing value, dan infinity.
+- [x] 91. Jangan menyimpan informasi penting hanya di `DataFrame.attrs`.
+- [x] 92. Ubah hasil missing analysis menjadi struktur yang secara eksplisit memisahkan statistik per kolom dan per baris.
+- [x] 93. Tambahkan metadata report mengenai sampling, konfigurasi, versi, dan waktu analisis.
+- [x] 94. Tentukan schema report yang stabil dan terdokumentasi.
 
 ## Testing yang harus ditambahkan
 
@@ -158,7 +158,7 @@ Struktur logis yang perlu tersedia:
 - [x] 107. Test object column berisi campuran string, list, dictionary, dan angka.
 - [x] 108. Test numeric identifier agar tidak salah diklasifikasikan.
 109. Test sampling menghasilkan hasil reproducible.
-110. Test serialization terhadap seluruh tipe output.
+- [x] 110. Test serialization terhadap seluruh tipe output.
 111. Test bahwa input DataFrame tidak berubah setelah semua fungsi dipanggil.
 112. Tambahkan branch coverage, bukan hanya statement coverage.
 113. Tambahkan property-based testing untuk invariant statistik dan schema.
@@ -184,8 +184,8 @@ Struktur logis yang perlu tersedia:
 - [x] 9. Buat analysis context.
 - [x] 10. Pecah `core.py`.
 - [x] 11. Tambahkan typed result.
-12. Pisahkan formatting dari printing.
-13. Tambahkan serialization.
+- [x] 12. Pisahkan formatting dari printing.
+- [x] 13. Tambahkan serialization.
 
 ### Optimasi berikutnya
 

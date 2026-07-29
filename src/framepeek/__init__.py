@@ -13,7 +13,8 @@ from .analysis import (
     overview,
     target,
 )
-from .report import print_report, profile
+from .report import format_report, print_report, profile
+from .serialization import to_serializable
 from .types import (
     CategoricalTargetResult,
     ColumnName,
@@ -51,6 +52,7 @@ __all__ = [
     "columns",
     "correlations",
     "duplicates",
+    "format_report",
     "missing",
     "numeric",
     "outliers",
@@ -58,6 +60,7 @@ __all__ = [
     "print_report",
     "profile",
     "target",
+    "to_serializable",
     "validate",
     "warnings",
 ]

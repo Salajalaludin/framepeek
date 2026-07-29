@@ -16,6 +16,8 @@ from .types import (
     CorrelationMethod,
     CorrelationResult,
     DuplicatesResult,
+    MissingResult,
+    MissingRowsResult,
     NumericTargetResult,
     OutlierMethod,
     TargetResult,
@@ -128,8 +130,8 @@ def missing(
     thresholds: tuple[float, float, float] = (5, 20, 50),
     *,
     _context: AnalysisContext | None = None,
-) -> pd.DataFrame:
-    """Return per-column missingness; row-level totals live in ``result.attrs``."""
+) -> MissingResult:
+    """Return explicit column and row missingness summaries."""
     validate(df)
     if not isinstance(thresholds, tuple) or len(thresholds) != 3:
         raise ValueError("thresholds must contain exactly three values.")
@@ -167,14 +169,17 @@ def missing(
     result["severity"] = result["missing_pct"].map(severity)
     result["rank"] = result["missing"].rank(method="min", ascending=False).astype(int)
     incomplete = int(df.isna().any(axis=1).sum())
-    result.attrs["rows"] = {
+    row_summary: MissingRowsResult = {
         "rows_with_missing": incomplete,
         "complete_rows": len(df) - incomplete,
         "complete_rows_pct": _pct(len(df) - incomplete, len(df)),
     }
-    return result.sort_values("missing", ascending=False, kind="stable").reset_index(
-        drop=True
-    )
+    return {
+        "columns": result.sort_values(
+            "missing", ascending=False, kind="stable"
+        ).reset_index(drop=True),
+        "rows": row_summary,
+    }
 
 
 def duplicates(
