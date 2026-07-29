@@ -11,6 +11,8 @@ Notable changes to FramePeek are recorded here.
 - Exposed `framepeek.__version__` and marked the distribution as typed.
 - Standardized finite numeric, integer, method, threshold, and DataFrame
   validation with clearer duplicate-column diagnostics.
+- Replaced the monolithic `core` module with focused analysis, validation,
+  warning, report, and public-type modules while preserving top-level imports.
 
 ## [0.1.1] - 2026-07-24
 

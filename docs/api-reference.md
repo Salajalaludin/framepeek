@@ -5,6 +5,11 @@ index, validate it, and leave it unchanged. Percentage parameters and output
 percentages use the `0..100` scale; ratio parameters use `0..1` unless noted
 otherwise. Numeric configuration rejects booleans, `NaN`, and infinity.
 
+The supported public API is exported from `framepeek`. Implementation is
+grouped into `analysis`, `validation`, `warnings`, and `report`; configuration
+aliases `ColumnName`, `CorrelationMethod`, `OutlierMethod`, and `Severity` are
+also public.
+
 ## Full report
 
 ### `profile`

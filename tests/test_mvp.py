@@ -4,8 +4,8 @@ import pandas as pd
 import pytest
 
 import framepeek as fp
-from framepeek import core
-from framepeek.core import _strength
+import framepeek.report as core
+from framepeek.analysis import _strength
 
 
 def sample() -> pd.DataFrame:
@@ -276,8 +276,8 @@ def test_profile_reuses_configured_correlation_and_outlier_results(
     x = pd.Series([*range(1, 30), 1000])
     df = pd.DataFrame({"x": x, "target": x**2})
     calls = {"correlations": 0, "outliers": 0}
-    original_correlations = core.correlations
-    original_outliers = core.outliers
+    original_correlations = core.analysis.correlations
+    original_outliers = core.analysis.outliers
 
     def count_correlations(*args, **kwargs):
         calls["correlations"] += 1
@@ -287,8 +287,8 @@ def test_profile_reuses_configured_correlation_and_outlier_results(
         calls["outliers"] += 1
         return original_outliers(*args, **kwargs)
 
-    monkeypatch.setattr(core, "correlations", count_correlations)
-    monkeypatch.setattr(core, "outliers", count_outliers)
+    monkeypatch.setattr(core.analysis, "correlations", count_correlations)
+    monkeypatch.setattr(core.analysis, "outliers", count_outliers)
 
     report = fp.profile(
         df,
