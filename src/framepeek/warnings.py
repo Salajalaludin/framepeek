@@ -25,7 +25,7 @@ _WARNING_COLUMNS = [
 ]
 
 
-def warnings(
+def quality_warnings(
     df: pd.DataFrame,
     target_column: ColumnName | None = None,
     missing_threshold: float = 20,
@@ -331,3 +331,6 @@ def warnings(
                 ratio,
             )
     return pd.DataFrame(rows, columns=_WARNING_COLUMNS)
+
+
+warnings = quality_warnings

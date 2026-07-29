@@ -43,11 +43,14 @@ def _get_context(
 
 def overview(
     df: pd.DataFrame,
+    deep_memory: bool = True,
     *,
     _context: AnalysisContext | None = None,
 ) -> pd.DataFrame:
     """Return dataset-level size, quality, memory, and type metrics."""
     validate(df)
+    if not isinstance(deep_memory, bool):
+        raise TypeError("deep_memory must be a boolean.")
     rows, column_count = df.shape
     total_cells = rows * column_count
     missing_cells = int(df.isna().sum().sum())
@@ -64,7 +67,7 @@ def overview(
         "missing_pct": _pct(missing_cells, total_cells),
         "duplicate_rows": duplicate_rows,
         "duplicate_pct": _pct(duplicate_rows, rows),
-        "memory_mb": round(df.memory_usage(deep=True).sum() / 1024**2, 4),
+        "memory_mb": round(df.memory_usage(deep=deep_memory).sum() / 1024**2, 4),
         "numeric_columns": int(kinds.get("numeric", 0)),
         "categorical_columns": int(kinds.get("categorical", 0)),
         "boolean_columns": int(kinds.get("boolean", 0)),
@@ -169,17 +172,41 @@ def missing(
 
     result["severity"] = result["missing_pct"].map(severity)
     result["rank"] = result["missing"].rank(method="min", ascending=False).astype(int)
-    incomplete = int(df.isna().any(axis=1).sum())
+    missing_mask = df.isna()
+    incomplete = int(missing_mask.any(axis=1).sum())
     row_summary: MissingRowsResult = {
         "rows_with_missing": incomplete,
         "complete_rows": len(df) - incomplete,
         "complete_rows_pct": _pct(len(df) - incomplete, len(df)),
     }
+    pattern_counts: dict[tuple[ColumnName, ...], int] = {}
+    for flags in missing_mask.itertuples(index=False, name=None):
+        pattern = tuple(
+            name for name, is_missing in zip(df.columns, flags) if is_missing
+        )
+        if pattern:
+            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
+    patterns = pd.DataFrame(
+        [
+            {
+                "missing_columns": pattern,
+                "rows": count,
+                "rows_pct": _pct(count, len(df)),
+            }
+            for pattern, count in pattern_counts.items()
+        ],
+        columns=["missing_columns", "rows", "rows_pct"],
+    )
+    if not patterns.empty:
+        patterns = patterns.sort_values(
+            "rows", ascending=False, kind="stable"
+        ).reset_index(drop=True)
     return {
         "columns": result.sort_values(
             "missing", ascending=False, kind="stable"
         ).reset_index(drop=True),
         "rows": row_summary,
+        "patterns": patterns,
     }
 
 

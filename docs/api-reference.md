@@ -31,6 +31,7 @@ profile(
     target_type="auto",
     warning_sample_size=1000,
     random_state=0,
+    deep_memory=True,
 )
 ```
 
@@ -49,6 +50,7 @@ profile(
 | `target_type` | `auto`, `categorical`, or `numeric`; overrides target interpretation when requested. |
 | `warning_sample_size` | Positive maximum number of text values parsed by warning heuristics. |
 | `random_state` | Seed used for reproducible warning sampling. |
+| `deep_memory` | Whether overview memory usage inspects Python-owned object data. Disable for a faster shallow estimate. |
 
 Returns a dictionary with `metadata`, `overview`, `columns`, `missing`,
 `duplicates`, `numeric`, `categorical`, `outliers`, `correlations`, `target`,
@@ -71,10 +73,11 @@ non-DataFrame or MultiIndex columns, `ValueError` for an empty DataFrame or
 duplicate column names, and `KeyError` for an unknown target. Duplicate-column
 errors include each repeated label and its occurrence count.
 
-### `overview(df)`
+### `overview(df, deep_memory=True)`
 
 Returns a two-column `DataFrame` (`metric`, `value`) containing dimensions,
 missing and duplicate totals, memory use, and column-type counts.
+Set `deep_memory=False` to skip pandas' slower object-data inspection.
 
 ### `columns(df, high_cardinality_ratio=0.5)`
 
@@ -85,9 +88,10 @@ cardinality, leading value, and identifier/constant/high-cardinality flags.
 ### `missing(df, thresholds=(5, 20, 50))`
 
 Returns a `DataFrame` with `column`, `missing`, `missing_pct`, `non_missing`,
-`severity`, and `rank`. Row-level totals are stored in
-`result.attrs["rows"]`. `thresholds` must be a tuple of three increasing values
-within `0..100`.
+`severity`, and `rank` under `result["columns"]`. `result["rows"]` contains
+row-level totals, while `result["patterns"]` groups rows by the tuple of columns
+that are missing together. `thresholds` must be a tuple of three increasing
+values within `0..100`.
 
 ### `duplicates(df, subset=None, max_examples=5)`
 
@@ -158,10 +162,10 @@ to override automatic interpretation.
 
 ## Warnings
 
-### `warnings`
+### `quality_warnings`
 
 ```python
-warnings(
+quality_warnings(
     df,
     target_column=None,
     missing_threshold=20,
@@ -176,6 +180,8 @@ warnings(
 
 Returns a `DataFrame` with `code`, `severity`, `column`, `message`,
 `recommendation`, and `metric`.
+`warnings()` remains a compatibility alias; new code should use
+`quality_warnings()`.
 
 | Code | Trigger |
 | --- | --- |

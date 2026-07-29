@@ -13,6 +13,8 @@ def to_serializable(value: Any) -> Any:
         return [to_serializable(row) for row in value.to_dict(orient="records")]
     if isinstance(value, dict):
         return {str(key): to_serializable(nested) for key, nested in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [to_serializable(item) for item in value]
     if isinstance(value, (pd.Timestamp, datetime, date)):
         return value.isoformat()
     if value is pd.NA or value is pd.NaT:

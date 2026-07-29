@@ -38,7 +38,7 @@ report = fp.profile(df, target_column="churn")
 fp.print_report(report)
 ```
 
-`profile()` returns ten sections: `overview`, `columns`, `missing`,
+`profile()` returns metadata plus ten analysis sections: `overview`, `columns`, `missing`,
 `duplicates`, `numeric`, `categorical`, `outliers`, `correlations`, `target`,
 and `warnings`. `print_report()` prints each section under a title without
 truncating rows, columns, or long values. The `target` value is `None` when no
@@ -47,7 +47,7 @@ target column is supplied.
 Use an individual analysis when the full report is unnecessary:
 
 ```python
-missing_by_column = fp.missing(df, thresholds=(5, 20, 50))
+missing_summary = fp.missing(df, thresholds=(5, 20, 50))
 strong_pairs = fp.correlations(df, method="spearman", threshold=0.7)
 ```
 
