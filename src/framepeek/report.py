@@ -6,7 +6,13 @@ import pandas as pd
 
 from . import analysis
 from ._context import AnalysisContext
-from .types import ColumnName, CorrelationMethod, OutlierMethod
+from .types import (
+    ColumnName,
+    CorrelationMethod,
+    OutlierMethod,
+    ProfileResult,
+    TargetType,
+)
 from .validation import validate
 from .warnings import warnings
 
@@ -22,7 +28,8 @@ def profile(
     warning_missing_threshold: float = 20,
     high_cardinality_ratio: float = 0.5,
     imbalance_ratio: float = 3,
-) -> dict[str, Any]:
+    target_type: TargetType = "auto",
+) -> ProfileResult:
     """Run every MVP analysis without mutating the input DataFrame."""
     validate(df, target_column)
     context = AnalysisContext.from_frame(df)
@@ -37,6 +44,7 @@ def profile(
             df,
             target_column,
             imbalance_ratio,
+            target_type=target_type,
             _correlation_result=correlation_result,
             _outlier_result=outlier_result,
             _context=context,
@@ -75,7 +83,7 @@ def profile(
     }
 
 
-def print_report(report: dict[str, Any]) -> None:
+def print_report(report: ProfileResult | dict[str, Any]) -> None:
     """Print a profile report with titled, untruncated tables."""
     if not isinstance(report, dict):
         raise TypeError("report must be the dictionary returned by profile().")
