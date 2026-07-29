@@ -15,6 +15,8 @@ Notable changes to FramePeek are recorded here.
   warning, report, and public-type modules while preserving top-level imports.
 - Reused per-column type, missingness, cardinality, and frequency metadata
   throughout each `profile()` call.
+- Added public structured result types and explicit target interpretation
+  through `target_type`.
 
 ## [0.1.1] - 2026-07-24
 

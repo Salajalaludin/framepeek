@@ -6,7 +6,13 @@ import pandas as pd
 
 from . import analysis
 from ._context import AnalysisContext
-from .types import ColumnName, OutlierMethod, Severity
+from .types import (
+    ColumnName,
+    OutlierMethod,
+    Severity,
+    TargetResult,
+    WarningsResult,
+)
 from .validation import _number, validate
 
 _WARNING_COLUMNS = [
@@ -31,9 +37,9 @@ def warnings(
     outlier_method: OutlierMethod = "iqr",
     outlier_multiplier: float = 1.5,
     _outlier_result: pd.DataFrame | None = None,
-    _target_result: dict[str, Any] | None = None,
+    _target_result: TargetResult | None = None,
     _context: AnalysisContext | None = None,
-) -> pd.DataFrame:
+) -> WarningsResult:
     """Return actionable data-quality warnings."""
     validate(df, target_column)
     _number("missing_threshold", missing_threshold, minimum=0, maximum=100)

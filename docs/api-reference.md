@@ -27,6 +27,7 @@ profile(
     warning_missing_threshold=20,
     high_cardinality_ratio=0.5,
     imbalance_ratio=3,
+    target_type="auto",
 )
 ```
 
@@ -42,6 +43,7 @@ profile(
 | `warning_missing_threshold` | Missing percentage above which a warning is emitted. |
 | `high_cardinality_ratio` | Categorical unique-value ratio within `(0, 1]`. |
 | `imbalance_ratio` | Majority-to-minority ratio above which a target is imbalanced; must exceed `1`. |
+| `target_type` | `auto`, `categorical`, or `numeric`; overrides target interpretation when requested. |
 
 Returns a dictionary with exactly ten keys: `overview`, `columns`, `missing`,
 `duplicates`, `numeric`, `categorical`, `outliers`, `correlations`, `target`,
@@ -114,12 +116,13 @@ Returns `{"matrix": DataFrame, "pairs": DataFrame}` for numeric, non-boolean
 columns. `method` accepts `pearson`, `spearman`, or `kendall`; `threshold`
 filters pairs by absolute correlation and must be within `0..1`.
 
-### `target(df, target_column, imbalance_ratio=3)`
+### `target(df, target_column, imbalance_ratio=3, *, target_type="auto")`
 
 Analyzes an existing target column. Targets with at most 20 non-missing unique
 values, plus categorical and boolean targets, return a categorical dictionary
 with distribution and imbalance fields. Other numeric targets return a
-dictionary with numeric summary, outliers, and correlations.
+dictionary with numeric summary, outliers, and correlations. Set `target_type`
+to override automatic interpretation.
 `imbalance_ratio` must exceed one.
 
 ## Warnings

@@ -71,14 +71,14 @@ Struktur logis yang perlu tersedia:
 
 - [x] 36. Tambahkan `py.typed` ke distribution package.
 - [x] 37. Pastikan `py.typed` benar-benar masuk ke wheel dan source distribution.
-38. Tambahkan tipe hasil terstruktur untuk report, correlations, duplicates, target, dan warnings.
-39. Kurangi penggunaan `Any` pada return type publik.
+- [x] 38. Tambahkan tipe hasil terstruktur untuk report, correlations, duplicates, target, dan warnings.
+- [x] 39. Kurangi penggunaan `Any` pada return type publik.
 - [x] 40. Gunakan `Literal` untuk metode yang hanya menerima pilihan tertentu.
-41. Gunakan tipe khusus untuk correlation method, outlier method, target type, dan severity. *(Correlation method, outlier method, dan severity selesai; target type menunggu item 42.)*
-42. Tambahkan `target_type` dengan pilihan otomatis, kategorikal, atau numerik.
+- [x] 41. Gunakan tipe khusus untuk correlation method, outlier method, target type, dan severity.
+- [x] 42. Tambahkan `target_type` dengan pilihan otomatis, kategorikal, atau numerik.
 - [x] 43. Tambahkan tipe yang jelas untuk nama kolom yang dapat berupa objek hashable selain string.
-44. Pastikan overload atau union hasil target dapat dibedakan dari field `type`.
-45. Jalankan type checking terhadap public API, bukan hanya implementasi internal.
+- [x] 44. Pastikan overload atau union hasil target dapat dibedakan dari field `type`.
+- [x] 45. Jalankan type checking terhadap public API, bukan hanya implementasi internal.
 
 ### Versioning dan metadata runtime
 
@@ -117,7 +117,7 @@ Struktur logis yang perlu tersedia:
 72. Tangani IQR bernilai nol secara eksplisit.
 73. Tandai keterbatasan outlier detection pada kolom constant atau near-constant.
 74. Tambahkan minimum sample size untuk skewness, kurtosis, korelasi, dan outlier detection.
-75. Jangan otomatis menganggap target numerik dengan sedikit nilai unik sebagai kategorikal tanpa opsi override.
+- [x] 75. Jangan otomatis menganggap target numerik dengan sedikit nilai unik sebagai kategorikal tanpa opsi override.
 76. Tambahkan deteksi numeric identifier agar nomor telepon, kode pos, NIK, dan kode produk tidak mudah dianggap numeric-as-string.
 77. Tambahkan deteksi empty string dan whitespace-only values.
 78. Tambahkan deteksi perbedaan kapitalisasi kategori.
@@ -183,7 +183,7 @@ Struktur logis yang perlu tersedia:
 - [x] 8. Buat validation helpers.
 - [x] 9. Buat analysis context.
 - [x] 10. Pecah `core.py`.
-11. Tambahkan typed result.
+- [x] 11. Tambahkan typed result.
 12. Pisahkan formatting dari printing.
 13. Tambahkan serialization.
 

@@ -426,3 +426,20 @@ def test_profile_builds_column_metadata_once(monkeypatch) -> None:
 
     assert calls == 1
     assert report["columns"].set_index("column").loc["city", "missing"] == 1
+
+
+def test_target_type_overrides_low_cardinality_numeric_inference() -> None:
+    df = pd.DataFrame({"feature": range(6), "target": [0, 1, 0, 1, 0, 1]})
+
+    automatic = fp.target(df, "target")
+    numeric = fp.target(df, "target", target_type="numeric")
+    categorical = fp.profile(
+        df, target_column="feature", target_type="categorical"
+    )["target"]
+
+    assert automatic["type"] == "categorical"
+    assert numeric["type"] == "numeric"
+    assert categorical is not None and categorical["type"] == "categorical"
+
+    with pytest.raises(ValueError, match="target_type"):
+        fp.target(df, "target", target_type="invalid")

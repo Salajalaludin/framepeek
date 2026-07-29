@@ -5,12 +5,22 @@ from __future__ import annotations
 from collections.abc import Sequence
 from itertools import combinations
 from math import inf, nan
-from typing import Any, cast
+from typing import Any, Literal, cast, overload
 
 import pandas as pd
 
 from ._context import AnalysisContext, column_kind
-from .types import ColumnName, CorrelationMethod, OutlierMethod
+from .types import (
+    CategoricalTargetResult,
+    ColumnName,
+    CorrelationMethod,
+    CorrelationResult,
+    DuplicatesResult,
+    NumericTargetResult,
+    OutlierMethod,
+    TargetResult,
+    TargetType,
+)
 from .validation import _choice, _integer, _number, validate
 
 
@@ -171,7 +181,7 @@ def duplicates(
     df: pd.DataFrame,
     subset: Sequence[ColumnName] | None = None,
     max_examples: int = 5,
-) -> dict[str, Any]:
+) -> DuplicatesResult:
     """Return duplicate totals, repeated groups, and bounded examples."""
     validate(df)
     _integer("max_examples", max_examples, minimum=0)
@@ -418,7 +428,7 @@ def correlations(
     threshold: float = 0,
     *,
     _context: AnalysisContext | None = None,
-) -> dict[str, pd.DataFrame]:
+) -> CorrelationResult:
     """Return a numeric correlation matrix and a tidy pair table."""
     validate(df)
     _choice("method", method, {"pearson", "spearman", "kendall"})
@@ -460,15 +470,68 @@ def correlations(
     return {"matrix": matrix, "pairs": pairs}
 
 
+@overload
 def target(
     df: pd.DataFrame,
     target_column: ColumnName,
     imbalance_ratio: float = 3,
     *,
-    _correlation_result: dict[str, pd.DataFrame] | None = None,
+    target_type: Literal["categorical"],
+    _correlation_result: CorrelationResult | None = None,
     _outlier_result: pd.DataFrame | None = None,
     _context: AnalysisContext | None = None,
-) -> dict[str, Any]:
+) -> CategoricalTargetResult: ...
+
+
+@overload
+def target(
+    df: pd.DataFrame,
+    target_column: ColumnName,
+    imbalance_ratio: float = 3,
+    *,
+    target_type: Literal["numeric"],
+    _correlation_result: CorrelationResult | None = None,
+    _outlier_result: pd.DataFrame | None = None,
+    _context: AnalysisContext | None = None,
+) -> NumericTargetResult: ...
+
+
+@overload
+def target(
+    df: pd.DataFrame,
+    target_column: ColumnName,
+    imbalance_ratio: float = 3,
+    *,
+    target_type: Literal["auto"] = "auto",
+    _correlation_result: CorrelationResult | None = None,
+    _outlier_result: pd.DataFrame | None = None,
+    _context: AnalysisContext | None = None,
+) -> TargetResult: ...
+
+
+@overload
+def target(
+    df: pd.DataFrame,
+    target_column: ColumnName,
+    imbalance_ratio: float = 3,
+    *,
+    target_type: TargetType,
+    _correlation_result: CorrelationResult | None = None,
+    _outlier_result: pd.DataFrame | None = None,
+    _context: AnalysisContext | None = None,
+) -> TargetResult: ...
+
+
+def target(
+    df: pd.DataFrame,
+    target_column: ColumnName,
+    imbalance_ratio: float = 3,
+    *,
+    target_type: TargetType = "auto",
+    _correlation_result: CorrelationResult | None = None,
+    _outlier_result: pd.DataFrame | None = None,
+    _context: AnalysisContext | None = None,
+) -> TargetResult:
     """Return a categorical or numeric target summary."""
     validate(df, target_column)
     _number(
@@ -477,14 +540,16 @@ def target(
         minimum=1,
         include_minimum=False,
     )
+    _choice("target_type", target_type, {"auto", "categorical", "numeric"})
     context = _get_context(df, _context)
     series = df[target_column]
     clean = series.dropna()
-    categorical_target = context.columns[target_column].kind in {
-        "categorical",
-        "boolean",
-    } or (
-        context.columns[target_column].unique <= 20
+    categorical_target = target_type == "categorical" or (
+        target_type == "auto"
+        and (
+            context.columns[target_column].kind in {"categorical", "boolean"}
+            or context.columns[target_column].unique <= 20
+        )
     )
     if categorical_target:
         counts = context.columns[target_column].value_counts
