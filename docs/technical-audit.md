@@ -149,7 +149,7 @@ Struktur logis yang perlu tersedia:
 - [x] 98. Test dengan mocking atau instrumentation untuk menghitung jumlah pemanggilan fungsi internal.
 - [x] 99. Test seluruh batas threshold tepat di bawah, tepat pada, dan tepat di atas batas.
 - [x] 100. Test tipe pandas nullable seperti `Int64`, `Float64`, `boolean`, dan `string`.
-101. Test datetime dengan timezone, timedelta, category, dan Arrow-backed string.
+- [x] 101. Test datetime dengan timezone, timedelta, category, dan Arrow-backed string.
 - [x] 102. Test semua NaN, semua infinity, campuran NaN dan infinity, serta satu nilai valid.
 - [x] 103. Test kolom constant dan IQR nol.
 - [x] 104. Test DataFrame dengan satu baris dan satu kolom.
@@ -161,7 +161,7 @@ Struktur logis yang perlu tersedia:
 - [x] 110. Test serialization terhadap seluruh tipe output.
 - [x] 111. Test bahwa input DataFrame tidak berubah setelah semua fungsi dipanggil.
 - [x] 112. Tambahkan branch coverage, bukan hanya statement coverage.
-113. Tambahkan property-based testing untuk invariant statistik dan schema.
+- [x] 113. Tambahkan property-based testing untuk invariant statistik dan schema.
 - [x] 114. Test wheel yang sudah dibangun, bukan hanya editable installation.
 - [x] 115. Test bahwa `py.typed` tersedia dalam wheel.
 - [x] 116. Test import dan type checking dari project eksternal sederhana.
