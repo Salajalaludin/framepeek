@@ -6,6 +6,7 @@ import pandas as pd
 
 from . import analysis
 from ._context import AnalysisContext
+from ._values import duplicated
 from .types import (
     ColumnName,
     OutlierMethod,
@@ -100,10 +101,7 @@ def quality_warnings(
             }
         )
 
-    try:
-        duplicate_count = int(df.duplicated().sum())
-    except TypeError:
-        duplicate_count = int(df.map(repr).duplicated().sum())
+    duplicate_count = int(duplicated(df).sum())
     if duplicate_count:
         add(
             "duplicate_rows",
@@ -140,7 +138,9 @@ def quality_warnings(
                 unique,
             )
         else:
-            top_ratio = float(metadata.value_counts.iloc[0] / metadata.non_null)
+            top_ratio = float(
+                metadata.value_counts[0].count / metadata.non_null
+            )
             if top_ratio >= near_constant_ratio:
                 add(
                     "near_constant",
@@ -264,8 +264,10 @@ def quality_warnings(
                     "Standardize case when those categories are equivalent.",
                     trimmed.nunique() - trimmed.str.casefold().nunique(),
                 )
-            rare_count = int(
-                metadata.value_counts[metadata.value_counts.le(rare_max_count)].sum()
+            rare_count = sum(
+                item.count
+                for item in metadata.value_counts
+                if item.count <= rare_max_count
             )
             rare_ratio = rare_count / metadata.non_null
             if rare_ratio >= rare_concentration_ratio:

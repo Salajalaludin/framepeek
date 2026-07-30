@@ -10,6 +10,7 @@ from typing import Any, Literal, cast, overload
 import pandas as pd
 
 from ._context import AnalysisContext, column_kind
+from ._values import duplicate_data, duplicated
 from .types import (
     CategoricalTargetResult,
     ColumnName,
@@ -54,7 +55,7 @@ def overview(
     rows, column_count = df.shape
     total_cells = rows * column_count
     missing_cells = int(df.isna().sum().sum())
-    duplicate_rows = int(df.duplicated().sum())
+    duplicate_rows = int(duplicated(df).sum())
     context = _get_context(df, _context)
     kinds = pd.Series(
         [metadata.kind for metadata in context.columns.values()]
@@ -100,8 +101,8 @@ def columns(
         metadata = context.columns[name]
         non_null, unique = metadata.non_null, metadata.unique
         counts = metadata.value_counts
-        top = counts.index[0] if not counts.empty else None
-        top_frequency = int(counts.iloc[0]) if not counts.empty else 0
+        top = counts[0].value if counts else None
+        top_frequency = counts[0].count if counts else 0
         kind = metadata.kind
         unique_ratio = unique / non_null if non_null else 0.0
         rows.append(
@@ -225,20 +226,13 @@ def duplicates(
         if not subset:
             raise ValueError("subset must contain at least one column.")
 
-    duplicate_rows = int(df.duplicated(subset=subset).sum())
-    repeated = df[df.duplicated(subset=subset, keep=False)]
-    keys = list(subset) if subset is not None else list(df.columns)
-    if repeated.empty:
-        groups = pd.DataFrame(columns=[*keys, "count"])
-    else:
-        groups = (
-            repeated.groupby(keys, dropna=False, sort=False)
-            .size()
-            .rename("count")
-            .reset_index()
-            .sort_values("count", ascending=False)
-            .reset_index(drop=True)
-        )
+    keys: list[ColumnName] = (
+        list(subset) if subset is not None else list(df.columns)
+    )
+    data = duplicate_data(df, keys)
+    duplicate_rows = int(data.duplicate_mask.sum())
+    repeated = df[data.repeated_mask]
+    groups = data.groups
     return {
         "duplicate_rows": duplicate_rows,
         "duplicate_pct": _pct(duplicate_rows, len(df)),
@@ -374,6 +368,19 @@ def categorical(
         if metadata.kind not in {"categorical", "boolean"}:
             continue
         counts = metadata.value_counts
+        top_counts = counts[:top_n]
+        top_categories = (
+            {item.value: item.count for item in top_counts}
+            if all(isinstance(item.value, str) for item in top_counts)
+            else [
+                {
+                    "value": item.value,
+                    "count": item.count,
+                    "transformed": item.transformed,
+                }
+                for item in top_counts
+            ]
+        )
         non_null, unique = metadata.non_null, metadata.unique
         rows.append(
             {
@@ -381,17 +388,19 @@ def categorical(
                 "unique": unique,
                 "missing": len(series) - non_null,
                 "missing_pct": _pct(len(series) - non_null, len(series)),
-                "top": counts.index[0] if not counts.empty else None,
-                "top_frequency": int(counts.iloc[0]) if not counts.empty else 0,
-                "top_pct": _pct(int(counts.iloc[0]), non_null)
-                if not counts.empty
+                "top": counts[0].value if counts else None,
+                "top_frequency": counts[0].count if counts else 0,
+                "top_pct": _pct(counts[0].count, non_null)
+                if counts
                 else 0.0,
                 "cardinality_ratio": round(unique / non_null, 4)
                 if non_null
                 else 0.0,
-                "top_categories": counts.head(top_n).to_dict(),
-                "rare_categories": int(counts.le(rare_max_count).sum()),
-                "singleton_categories": int(counts.eq(1).sum()),
+                "top_categories": top_categories,
+                "rare_categories": sum(
+                    item.count <= rare_max_count for item in counts
+                ),
+                "singleton_categories": sum(item.count == 1 for item in counts),
             }
         )
     return pd.DataFrame(rows, columns=_CATEGORICAL_COLUMNS)
@@ -671,18 +680,29 @@ def target(
     )
     if categorical_target:
         counts = context.columns[target_column].value_counts
-        distribution = counts.rename("count").to_frame()
-        distribution["percentage"] = [
-            _pct(int(value), len(clean)) for value in counts.to_numpy()
-        ]
-        distribution = distribution.rename_axis("value").reset_index()
-        ratio = float(counts.max() / counts.min()) if len(counts) > 1 else 1.0
+        distribution = pd.DataFrame(
+            [
+                {
+                    "value": item.value,
+                    "count": item.count,
+                    "percentage": _pct(item.count, len(clean)),
+                    "transformed": item.transformed,
+                }
+                for item in counts
+            ],
+            columns=["value", "count", "percentage", "transformed"],
+        )
+        ratio = (
+            float(counts[0].count / counts[-1].count)
+            if len(counts) > 1
+            else 1.0
+        )
         return {
             "type": "categorical",
             "classes": len(counts),
             "missing": int(series.isna().sum()),
-            "majority_class": counts.index[0] if not counts.empty else None,
-            "minority_class": counts.index[-1] if not counts.empty else None,
+            "majority_class": counts[0].value if counts else None,
+            "minority_class": counts[-1].value if counts else None,
             "majority_to_minority_ratio": round(ratio, 2),
             "imbalanced": ratio >= imbalance_ratio,
             "distribution": distribution,
