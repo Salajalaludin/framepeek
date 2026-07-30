@@ -19,6 +19,13 @@ def sample() -> pd.DataFrame:
     )
 
 
+class SameDisplay:
+    __hash__ = None
+
+    def __repr__(self) -> str:
+        return "same-display"
+
+
 def test_profile_contains_complete_mvp_without_mutation() -> None:
     df = sample()
     original = df.copy(deep=True)
@@ -176,6 +183,58 @@ def test_duplicate_numeric_categorical_and_outlier_details() -> None:
     assert pd.isna(
         fp.outliers(pd.DataFrame({"x": [float("nan")]})).loc[0, "outlier_count"]
     )
+
+
+def test_nested_unhashable_values_use_structural_identity_without_mutation() -> None:
+    first = SameDisplay()
+    second = SameDisplay()
+    df = pd.DataFrame(
+        {
+            "value": [
+                [1, {"x": [2]}],
+                [1, {"x": [2]}],
+                {"a": [1], "b": {2, 3}},
+                {"b": {3, 2}, "a": [1]},
+                {1, 2},
+                {2, 1},
+                (1, [2]),
+                (1, [2]),
+                first,
+                second,
+            ]
+        }
+    )
+    original = df.copy(deep=True)
+
+    overview = fp.overview(df).set_index("metric")["value"]
+    duplicates = fp.duplicates(df, max_examples=10)
+    categorical = fp.categorical(df).iloc[0]
+    report = fp.profile(df)
+
+    assert overview["duplicate_rows"] == 4
+    assert duplicates["duplicate_rows"] == 4
+    assert duplicates["duplicate_groups"] == 4
+    assert len(duplicates["examples"]) == 8
+    assert categorical["unique"] == 6
+    assert categorical["top_categories"] == [
+        {"value": [1, {"x": [2]}], "count": 2, "transformed": True},
+        {
+            "value": {"a": [1], "b": {2, 3}},
+            "count": 2,
+            "transformed": True,
+        },
+        {"value": {1, 2}, "count": 2, "transformed": True},
+        {"value": (1, [2]), "count": 2, "transformed": True},
+        {"value": first, "count": 1, "transformed": True},
+    ]
+    assert "duplicate_rows" in set(report["warnings"]["code"])
+    pd.testing.assert_frame_equal(df, original)
+
+    cyclic: list[object] = []
+    cyclic.append(cyclic)
+    assert fp.duplicates(pd.DataFrame({"value": [cyclic, cyclic]}))[
+        "duplicate_rows"
+    ] == 1
 
 
 def test_correlations_and_numeric_target() -> None:

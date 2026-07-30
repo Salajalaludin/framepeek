@@ -9,6 +9,7 @@ from pandas.api.types import (
     is_numeric_dtype,
 )
 
+from ._values import ValueCount, value_counts
 from .types import ColumnName
 from .validation import validate
 
@@ -34,7 +35,7 @@ class ColumnMetadata:
     non_null: int
     missing: int
     unique: int
-    value_counts: pd.Series
+    value_counts: tuple[ValueCount, ...]
 
 
 @dataclass(frozen=True)
@@ -47,7 +48,7 @@ class AnalysisContext:
         metadata: dict[ColumnName, ColumnMetadata] = {}
         for name in df.columns:
             series = df[name]
-            counts = series.value_counts(dropna=True)
+            counts = value_counts(series)
             non_null = int(series.notna().sum())
             metadata[name] = ColumnMetadata(
                 kind=column_kind(series),

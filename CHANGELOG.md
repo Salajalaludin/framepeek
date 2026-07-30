@@ -6,6 +6,9 @@ Notable changes to FramePeek are recorded here.
 
 ### Changed
 
+- Added shared structural identity for duplicate and frequency analysis so
+  lists, dictionaries, sets, nested values, and mixed object columns no longer
+  require hashability or `repr()`-based equality.
 - Replaced lossy string-key serialization with schema `1.0` envelopes that
   preserve mapping entries, DataFrame labels, tagged scalar types, and
   conversion fidelity.

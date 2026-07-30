@@ -108,7 +108,9 @@ values within `0..100`.
 
 Returns a dictionary with `duplicate_rows`, `duplicate_pct`,
 `duplicate_groups`, `unique_rows`, `groups`, and `examples`. `subset` optionally
-selects existing columns; `max_examples` is a non-negative integer.
+selects existing columns; `max_examples` is a non-negative integer. Lists,
+dictionaries, sets, and nested mixtures are compared structurally without
+changing their display values.
 
 ## Column analyses
 
@@ -123,7 +125,10 @@ are no numeric columns.
 
 Returns one `DataFrame` row per categorical or boolean column with cardinality,
 the leading value, top values, and rare/singleton counts. `top_n` must be a
-positive integer and `rare_max_count` must be at least one.
+positive integer and `rare_max_count` must be at least one. String-only top
+values retain the compact dictionary form. Other values use records containing
+`value`, `count`, and `transformed`; the final field reports whether FramePeek
+used a structural or identity key internally.
 
 ### `outliers(df, method="iqr", multiplier=1.5, min_samples=4)`
 

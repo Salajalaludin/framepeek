@@ -49,6 +49,8 @@ fp.quality_warnings(df, target_column="churn")
 ```
 
 All functions validate their inputs and leave the original DataFrame unchanged.
+Object columns containing lists, dictionaries, sets, or nested mixtures use
+safe structural identity for duplicate and categorical analysis.
 
 ## Outputs
 
