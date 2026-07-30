@@ -4,6 +4,8 @@ Notable changes to FramePeek are recorded here.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-30
+
 ### Changed
 
 - Added shared structural identity for duplicate and frequency analysis so
