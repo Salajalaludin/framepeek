@@ -43,7 +43,7 @@ These findings should block the next public release until corrected.
 ## Remediation Checklist
 
 - [x] 1. Prevent serialization collisions and silent data loss ([#43](https://github.com/Salajalaludin/framepeek/issues/43), [#44](https://github.com/Salajalaludin/framepeek/pull/44)).
-- [x] 2. Handle unhashable DataFrame values safely ([#45](https://github.com/Salajalaludin/framepeek/issues/45)).
+- [x] 2. Handle unhashable DataFrame values safely ([#45](https://github.com/Salajalaludin/framepeek/issues/45), [#46](https://github.com/Salajalaludin/framepeek/pull/46)).
 - [ ] 3. Expose correlation safeguards through `profile()`.
 - [ ] 4. Make report metadata complete and accurate.
 - [ ] 5. Update release documentation, assertions, and version.
