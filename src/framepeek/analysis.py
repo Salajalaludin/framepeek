@@ -689,7 +689,8 @@ def target(
                     "transformed": item.transformed,
                 }
                 for item in counts
-            ]
+            ],
+            columns=["value", "count", "percentage", "transformed"],
         )
         ratio = (
             float(counts[0].count / counts[-1].count)
