@@ -4,6 +4,8 @@ Notable changes to FramePeek are recorded here.
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-08-09
+
 ### Fixed
 
 - Made frequency and duplicate analysis use actual-value hashability with a
