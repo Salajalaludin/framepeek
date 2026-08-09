@@ -4,6 +4,12 @@ Notable changes to FramePeek are recorded here.
 
 ## [Unreleased]
 
+### Fixed
+
+- Made frequency and duplicate analysis use actual-value hashability with a
+  structural fallback for nested containers and NumPy arrays, plus safe scalar
+  equality for unhashable custom objects.
+
 ## [0.2.0] - 2026-07-30
 
 ### Changed

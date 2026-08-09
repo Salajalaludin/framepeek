@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Any, Hashable, Literal, cast
 
+import numpy as np
 import pandas as pd
 
 from .types import ColumnName
@@ -13,6 +14,26 @@ class _ValueKey:
     kind: str
     value_type: type[object]
     value: Hashable
+
+
+@dataclass(frozen=True, eq=False)
+class _EqualityKey:
+    value: object
+
+    def __hash__(self) -> int:
+        # ponytail: constant per type; specialize if opaque-object cardinality
+        # becomes a measured bottleneck.
+        return hash(type(self.value))
+
+    def __eq__(self, other: object) -> bool:
+        other_value = cast(_EqualityKey, other).value
+        if self.value is other_value:
+            return True
+        try:
+            result = self.value == other_value
+            return not hasattr(result, "__len__") and bool(result)
+        except Exception:
+            return False
 
 
 @dataclass(frozen=True)
@@ -35,7 +56,7 @@ def _identity(
 ) -> tuple[_ValueKey, bool]:
     active = active or set()
     value_id = id(value)
-    if isinstance(value, (list, dict, set, frozenset, tuple)):
+    if isinstance(value, (list, dict, set, frozenset, tuple, np.ndarray)):
         if value_id in active:
             return _ValueKey("identity", type(value), value_id), True
         active.add(value_id)
@@ -49,6 +70,12 @@ def _identity(
                 (_identity(key, active)[0], _identity(item, active)[0])
                 for key, item in value.items()
             )
+        elif isinstance(value, np.ndarray):
+            nested = (
+                value.shape,
+                str(value.dtype),
+                tuple(_identity(item, active)[0] for item in value.flat),
+            )
         else:
             nested = frozenset(_identity(item, active)[0] for item in value)
         active.remove(value_id)
@@ -60,23 +87,42 @@ def _identity(
     try:
         hash(value)
     except Exception:
-        return _ValueKey("identity", type(value), value_id), True
+        return _ValueKey(
+            "equality", type(value), _EqualityKey(value)
+        ), True
     return _ValueKey("scalar", type(value), value), False
+
+
+def _can_use_pandas_counts(values: pd.Series) -> bool:
+    value_type: type[object] | None = None
+    try:
+        for value in values:
+            if value_type is None:
+                value_type = type(value)
+            elif type(value) is not value_type:
+                return False
+            hash(value)
+    except Exception:
+        return False
+    return True
 
 
 def value_counts(series: pd.Series) -> tuple[ValueCount, ...]:
     """Count values without requiring them to be hashable."""
     clean = series[series.notna()]
-    types: list[type[object]] = (
-        clean.map(type).unique().tolist() if series.dtype == object else []
+    use_fast_path = series.dtype != object or (
+        _can_use_pandas_counts(clean)
     )
-    if series.dtype != object or (
-        len(types) == 1 and types[0].__hash__ is not None
-    ):
-        return tuple(
-            ValueCount(value, int(count), False)
-            for value, count in clean.value_counts().items()
-        )
+    if use_fast_path:
+        try:
+            counts = clean.value_counts()
+        except Exception:
+            pass
+        else:
+            return tuple(
+                ValueCount(value, int(count), False)
+                for value, count in counts.items()
+            )
     groups: dict[_ValueKey, ValueCount] = {}
     for value in clean:
         key, transformed = _identity(value)

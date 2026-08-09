@@ -49,8 +49,13 @@ fp.quality_warnings(df, target_column="churn")
 ```
 
 All functions validate their inputs and leave the original DataFrame unchanged.
-Object columns containing lists, dictionaries, sets, or nested mixtures use
-safe structural identity for duplicate and categorical analysis.
+Object columns containing lists, tuples, dictionaries, sets, frozensets, or
+NumPy arrays use recursive structural identity for duplicate and categorical
+analysis. Arrays match when their concrete type, shape, dtype, and nested values
+match. Other unhashable custom objects use scalar boolean equality; objects
+whose equality raises or returns a non-scalar result are treated as distinct
+unless they are the same instance. Cyclic references likewise use instance
+identity at the cycle boundary.
 
 ## Outputs
 
