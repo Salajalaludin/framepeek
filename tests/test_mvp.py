@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 import framepeek as fp
+import framepeek._values as value_helpers
 import framepeek.report as core
 from framepeek.analysis import _strength
 
@@ -300,6 +301,98 @@ def test_actual_value_hashability_arrays_and_custom_equality() -> None:
     assert report["duplicates"]["duplicate_groups"] == 1
     assert "duplicate_rows" in set(report["warnings"]["code"])
     pd.testing.assert_frame_equal(df, original)
+
+
+def test_profile_computes_nested_duplicate_identity_once(monkeypatch) -> None:
+    df = pd.DataFrame({"value": [[1], [1], [2]]})
+    original = value_helpers._row_keys
+    calls = 0
+
+    def count_row_keys(*args, **kwargs):
+        nonlocal calls
+        calls += 1
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(value_helpers, "_row_keys", count_row_keys)
+
+    report = fp.profile(df)
+
+    assert calls == 1
+    assert report["duplicates"]["duplicate_rows"] == 1
+    assert "duplicate_rows" in set(report["warnings"]["code"])
+
+
+def test_hashable_duplicates_use_pandas_fast_path(monkeypatch) -> None:
+    df = pd.DataFrame(
+        {
+            "number": [1, 1, 2, 3, 3],
+            "text": pd.Series(
+                ["a", "a", "b", "c", "c"], dtype=object
+            ),
+        }
+    )
+
+    def fail_row_keys(*args, **kwargs):
+        raise AssertionError("structural fallback was used")
+
+    monkeypatch.setattr(value_helpers, "_row_keys", fail_row_keys)
+
+    result = fp.duplicates(df)
+
+    assert result["duplicate_rows"] == 2
+    assert result["groups"]["count"].tolist() == [2, 2]
+
+
+def test_duplicate_fast_path_matches_structural_fallback() -> None:
+    df = pd.DataFrame(
+        {
+            "number": pd.Series([1, 1, 2, 3, 3], dtype="Int64"),
+            "text": pd.Series(["a", "a", "b", "c", "c"], dtype="string"),
+            "when": pd.to_datetime(
+                ["2025-01-01", "2025-01-01", None, "2025-01-03", "2025-01-03"]
+            ),
+        }
+    )
+
+    fast = value_helpers.duplicate_data(df)
+    structural = value_helpers._structural_duplicate_data(
+        df, list(df.columns)
+    )
+
+    pd.testing.assert_series_equal(fast.duplicate_mask, structural.duplicate_mask)
+    pd.testing.assert_series_equal(fast.repeated_mask, structural.repeated_mask)
+    assert fast.groups.astype(object).equals(structural.groups.astype(object))
+
+
+def test_duplicate_fast_path_preserves_structural_scalar_semantics() -> None:
+    mixed = pd.DataFrame(
+        {"value": pd.Series([True, 1, False, 0], dtype=object)}
+    )
+    broken_hash = pd.DataFrame(
+        {"value": [BrokenHash(1), BrokenHash(1)]}
+    )
+
+    result = fp.duplicates(mixed)
+
+    assert result["duplicate_rows"] == 0
+    assert result["groups"].empty
+    assert fp.duplicates(broken_hash)["duplicate_rows"] == 1
+
+
+def test_duplicate_data_falls_back_when_pandas_raises(monkeypatch) -> None:
+    df = pd.DataFrame({"value": [1, 1, 2]})
+
+    def fail_duplicates(*args, **kwargs):
+        raise TypeError("unsupported pandas value")
+
+    monkeypatch.setattr(pd.DataFrame, "duplicated", fail_duplicates)
+
+    result = value_helpers.duplicate_data(df)
+    overview = fp.overview(df).set_index("metric")["value"]
+
+    assert result.duplicate_mask.tolist() == [False, True, False]
+    assert result.groups["count"].tolist() == [2]
+    assert overview["duplicate_rows"] == 1
 
 
 def test_unsupported_custom_equality_uses_instance_identity() -> None:

@@ -6,7 +6,7 @@ import pandas as pd
 
 from . import analysis
 from ._context import AnalysisContext
-from ._values import duplicated
+from ._values import duplicate_mask
 from .types import (
     ColumnName,
     OutlierMethod,
@@ -101,7 +101,12 @@ def quality_warnings(
             }
         )
 
-    duplicate_count = int(duplicated(df).sum())
+    duplicates = (
+        context.duplicates.duplicate_mask
+        if _context is not None
+        else duplicate_mask(df)
+    )
+    duplicate_count = int(duplicates.sum())
     if duplicate_count:
         add(
             "duplicate_rows",

@@ -100,7 +100,7 @@ def profile(
         "missing": analysis.missing(
             df, missing_thresholds, _context=context
         ),
-        "duplicates": analysis.duplicates(df),
+        "duplicates": analysis._duplicates_result(df, context.duplicates, 5),
         "numeric": analysis.numeric(df, _context=context),
         "categorical": analysis.categorical(
             df, top_n_categories, _context=context
