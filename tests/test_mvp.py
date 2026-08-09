@@ -1,6 +1,7 @@
 import json
 from importlib.metadata import version
 
+import numpy as np
 import pandas as pd
 import pytest
 
@@ -24,6 +25,29 @@ class SameDisplay:
 
     def __repr__(self) -> str:
         return "same-display"
+
+
+class BrokenHash:
+    def __init__(self, value: int) -> None:
+        self.value = value
+
+    def __hash__(self) -> int:
+        raise RuntimeError("broken hash")
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, BrokenHash) and self.value == other.value
+
+
+class UnsupportedEquality:
+    __hash__ = None
+
+    def __init__(self, vector: bool = False) -> None:
+        self.vector = vector
+
+    def __eq__(self, other: object):
+        if self.vector:
+            return np.array([True])
+        raise ValueError("no scalar equality")
 
 
 def test_profile_contains_complete_mvp_without_mutation() -> None:
@@ -188,6 +212,10 @@ def test_duplicate_numeric_categorical_and_outlier_details() -> None:
 def test_nested_unhashable_values_use_structural_identity_without_mutation() -> None:
     first = SameDisplay()
     second = SameDisplay()
+    first_array = np.array([1, 2])
+    second_array = np.array([1, 2])
+    first_broken = BrokenHash(1)
+    second_broken = BrokenHash(1)
     df = pd.DataFrame(
         {
             "value": [
@@ -199,6 +227,14 @@ def test_nested_unhashable_values_use_structural_identity_without_mutation() -> 
                 {2, 1},
                 (1, [2]),
                 (1, [2]),
+                (1, {"x": 2}),
+                (1, {"x": 2}),
+                frozenset({1, 2}),
+                frozenset({2, 1}),
+                first_array,
+                second_array,
+                first_broken,
+                second_broken,
                 first,
                 second,
             ]
@@ -207,15 +243,15 @@ def test_nested_unhashable_values_use_structural_identity_without_mutation() -> 
     original = df.copy(deep=True)
 
     overview = fp.overview(df).set_index("metric")["value"]
-    duplicates = fp.duplicates(df, max_examples=10)
+    duplicates = fp.duplicates(df, max_examples=20)
     categorical = fp.categorical(df).iloc[0]
     report = fp.profile(df)
 
-    assert overview["duplicate_rows"] == 4
-    assert duplicates["duplicate_rows"] == 4
-    assert duplicates["duplicate_groups"] == 4
-    assert len(duplicates["examples"]) == 8
-    assert categorical["unique"] == 6
+    assert overview["duplicate_rows"] == 8
+    assert duplicates["duplicate_rows"] == 8
+    assert duplicates["duplicate_groups"] == 8
+    assert len(duplicates["examples"]) == 16
+    assert categorical["unique"] == 10
     assert categorical["top_categories"] == [
         {"value": [1, {"x": [2]}], "count": 2, "transformed": True},
         {
@@ -225,8 +261,10 @@ def test_nested_unhashable_values_use_structural_identity_without_mutation() -> 
         },
         {"value": {1, 2}, "count": 2, "transformed": True},
         {"value": (1, [2]), "count": 2, "transformed": True},
-        {"value": first, "count": 1, "transformed": True},
+        {"value": (1, {"x": 2}), "count": 2, "transformed": True},
     ]
+    assert report["columns"].iloc[0]["unique"] == 10
+    assert report["categorical"].iloc[0]["unique"] == 10
     assert "duplicate_rows" in set(report["warnings"]["code"])
     pd.testing.assert_frame_equal(df, original)
 
@@ -235,6 +273,71 @@ def test_nested_unhashable_values_use_structural_identity_without_mutation() -> 
     assert fp.duplicates(pd.DataFrame({"value": [cyclic, cyclic]}))[
         "duplicate_rows"
     ] == 1
+
+
+def test_actual_value_hashability_arrays_and_custom_equality() -> None:
+    df = pd.DataFrame(
+        {
+            "tuple_list": [(1, [2]), (1, [2])],
+            "tuple_dict": [(1, {"x": 2}), (1, {"x": 2})],
+            "nested": [[{"x": [1]}], [{"x": [1]}]],
+            "set": [{1, 2}, {2, 1}],
+            "frozenset": [frozenset({1, 2}), frozenset({2, 1})],
+            "array": [np.array([1, 2]), np.array([1, 2])],
+            "broken_hash": [BrokenHash(1), BrokenHash(1)],
+        }
+    )
+    original = df.copy(deep=True)
+
+    report = fp.profile(df)
+    uniques = report["columns"].set_index("column")["unique"]
+
+    assert uniques.eq(1).all()
+    assert report["overview"].set_index("metric").loc[
+        "duplicate_rows", "value"
+    ] == 1
+    assert report["duplicates"]["duplicate_rows"] == 1
+    assert report["duplicates"]["duplicate_groups"] == 1
+    assert "duplicate_rows" in set(report["warnings"]["code"])
+    pd.testing.assert_frame_equal(df, original)
+
+
+def test_unsupported_custom_equality_uses_instance_identity() -> None:
+    same = UnsupportedEquality()
+    df = pd.DataFrame(
+        {
+            "same_instance": [same, same],
+            "raising_equality": [UnsupportedEquality(), UnsupportedEquality()],
+            "vector_equality": [
+                UnsupportedEquality(vector=True),
+                UnsupportedEquality(vector=True),
+            ],
+        }
+    )
+
+    uniques = fp.columns(df).set_index("column")["unique"]
+
+    assert uniques.to_dict() == {
+        "same_instance": 1,
+        "raising_equality": 2,
+        "vector_equality": 2,
+    }
+
+
+def test_value_counts_falls_back_when_pandas_raises(monkeypatch) -> None:
+    original = pd.Series.value_counts
+
+    def fail_for_value_column(self, *args, **kwargs):
+        if self.name == "value":
+            raise RuntimeError("pandas hashing failed")
+        return original(self, *args, **kwargs)
+
+    monkeypatch.setattr(pd.Series, "value_counts", fail_for_value_column)
+
+    result = fp.categorical(pd.DataFrame({"value": ["a", "a"]})).iloc[0]
+
+    assert result["unique"] == 1
+    assert result["top_frequency"] == 2
 
 
 def test_correlations_and_numeric_target() -> None:
