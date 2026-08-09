@@ -147,12 +147,20 @@ Tambahkan benchmark:
 
 - 100k rows × 10 numeric columns;
 - 1M rows × 10 columns;
+- 10M rows × 10 columns;
+- 25M rows x 10 columns;
 - mixed numeric/string;
 - nested object;
 - duplicated nested object;
 - pandas fast-path versus structural fallback.
 
+> Cap benchmark di 10M untuk CI; skala lebih besar (25M+) hanya dijalankan manual, bukan di CI, karena risiko OOM.
+
 Tambahkan regression test bahwa duplicate computation hanya dilakukan satu kali pada `profile()`.
+
+Tambahkan correctness test bahwa fast-path dan structural fallback menghasilkan
+duplicate result yang identik untuk data yang sama (all-hashable DataFrame yang
+bisa lewat kedua jalur).
 
 ---
 
