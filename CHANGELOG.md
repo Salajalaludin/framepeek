@@ -4,6 +4,14 @@ Notable changes to FramePeek are recorded here.
 
 ## [Unreleased]
 
+### Performance
+
+- Reused one duplicate analysis across each profile run instead of computing it
+  separately for the overview, duplicate report, and quality warnings.
+- Added a pandas-native fast path for normal hashable data while retaining the
+  structural fallback for nested, mixed-object, and unhashable values.
+- Reused structural row identities when building duplicate groups.
+
 ## [0.2.1] - 2026-08-09
 
 ### Fixed

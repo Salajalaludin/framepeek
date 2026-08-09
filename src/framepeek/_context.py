@@ -1,6 +1,7 @@
 """Internal per-run metadata reused by profile analyses."""
 
 from dataclasses import dataclass
+from functools import cached_property
 
 import pandas as pd
 from pandas.api.types import (
@@ -9,7 +10,7 @@ from pandas.api.types import (
     is_numeric_dtype,
 )
 
-from ._values import ValueCount, value_counts
+from ._values import DuplicateData, ValueCount, duplicate_data, value_counts
 from .types import ColumnName
 from .validation import validate
 
@@ -40,6 +41,7 @@ class ColumnMetadata:
 
 @dataclass(frozen=True)
 class AnalysisContext:
+    frame: pd.DataFrame
     columns: dict[ColumnName, ColumnMetadata]
 
     @classmethod
@@ -57,7 +59,11 @@ class AnalysisContext:
                 unique=len(counts),
                 value_counts=counts,
             )
-        return cls(metadata)
+        return cls(df, metadata)
+
+    @cached_property
+    def duplicates(self) -> DuplicateData:
+        return duplicate_data(self.frame)
 
     @property
     def numeric_names(self) -> list[ColumnName]:

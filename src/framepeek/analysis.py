@@ -10,7 +10,7 @@ from typing import Any, Literal, cast, overload
 import pandas as pd
 
 from ._context import AnalysisContext, column_kind
-from ._values import duplicate_data, duplicated
+from ._values import DuplicateData, duplicate_data, duplicate_mask
 from .types import (
     CategoricalTargetResult,
     ColumnName,
@@ -55,8 +55,13 @@ def overview(
     rows, column_count = df.shape
     total_cells = rows * column_count
     missing_cells = int(df.isna().sum().sum())
-    duplicate_rows = int(duplicated(df).sum())
     context = _get_context(df, _context)
+    duplicates = (
+        context.duplicates.duplicate_mask
+        if _context is not None
+        else duplicate_mask(df)
+    )
+    duplicate_rows = int(duplicates.sum())
     kinds = pd.Series(
         [metadata.kind for metadata in context.columns.values()]
     ).value_counts()
@@ -211,6 +216,24 @@ def missing(
     }
 
 
+def _duplicates_result(
+    df: pd.DataFrame,
+    data: DuplicateData,
+    max_examples: int,
+) -> DuplicatesResult:
+    duplicate_rows = int(data.duplicate_mask.sum())
+    repeated = df[data.repeated_mask]
+    groups = data.groups
+    return {
+        "duplicate_rows": duplicate_rows,
+        "duplicate_pct": _pct(duplicate_rows, len(df)),
+        "duplicate_groups": len(groups),
+        "unique_rows": len(df) - duplicate_rows,
+        "groups": groups,
+        "examples": repeated.head(max_examples).copy(),
+    }
+
+
 def duplicates(
     df: pd.DataFrame,
     subset: Sequence[ColumnName] | None = None,
@@ -229,18 +252,7 @@ def duplicates(
     keys: list[ColumnName] = (
         list(subset) if subset is not None else list(df.columns)
     )
-    data = duplicate_data(df, keys)
-    duplicate_rows = int(data.duplicate_mask.sum())
-    repeated = df[data.repeated_mask]
-    groups = data.groups
-    return {
-        "duplicate_rows": duplicate_rows,
-        "duplicate_pct": _pct(duplicate_rows, len(df)),
-        "duplicate_groups": len(groups),
-        "unique_rows": len(df) - duplicate_rows,
-        "groups": groups,
-        "examples": repeated.head(max_examples).copy(),
-    }
+    return _duplicates_result(df, duplicate_data(df, keys), max_examples)
 
 
 _NUMERIC_COLUMNS = [

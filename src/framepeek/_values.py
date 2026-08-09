@@ -1,7 +1,7 @@
 """Safe internal identity and grouping for arbitrary DataFrame values."""
 
 from dataclasses import dataclass
-from typing import Any, Hashable, Literal, cast
+from typing import Any, Hashable, cast
 
 import numpy as np
 import pandas as pd
@@ -166,39 +166,99 @@ def _duplicate_masks(
     )
 
 
-def duplicated(
+def _can_use_pandas_duplicates(
     df: pd.DataFrame,
-    subset: list[ColumnName] | None = None,
-    *,
-    keep: Literal["first", False] = "first",
-) -> pd.Series:
-    """Return a pandas-compatible duplicate mask for arbitrary values."""
-    columns: list[ColumnName] = (
-        subset if subset is not None else list(df.columns)
-    )
-    duplicate_mask, repeated_mask = _duplicate_masks(
-        _row_keys(df, columns), df.index
-    )
-    return repeated_mask if keep is False else duplicate_mask
+    columns: list[ColumnName],
+) -> bool:
+    for name in columns:
+        series = df[name]
+        if series.dtype != object:
+            continue
+        if bool(series.isna().any()):
+            return False
+        value_type: type[object] | None = None
+        try:
+            for value in series:
+                if isinstance(
+                    value,
+                    (list, dict, set, frozenset, tuple, np.ndarray),
+                ):
+                    return False
+                if value_type is None:
+                    value_type = type(value)
+                elif type(value) is not value_type:
+                    return False
+                hash(value)
+        except Exception:
+            return False
+    return True
 
 
-def duplicate_data(
+def _pandas_duplicate_data(
     df: pd.DataFrame,
-    subset: list[ColumnName] | None = None,
+    columns: list[ColumnName],
 ) -> DuplicateData:
-    """Return duplicate masks and groups without hash-dependent pandas calls."""
-    columns: list[ColumnName] = (
-        subset if subset is not None else list(df.columns)
+    selected = df.loc[:, columns]
+    repeated_mask = selected.duplicated(keep=False)
+    repeated = selected.loc[repeated_mask]
+    if repeated.empty:
+        return DuplicateData(
+            pd.Series(False, index=df.index, dtype=bool),
+            repeated_mask,
+            pd.DataFrame(columns=[*columns, "count"]),
+        )
+
+    codes, _ = pd.factorize(
+        pd.MultiIndex.from_frame(repeated),
+        sort=False,
+        use_na_sentinel=False,
     )
-    duplicate_mask, repeated_mask = _duplicate_masks(
-        _row_keys(df, columns), df.index
+    group_counts = np.bincount(codes)
+    _, first_positions = np.unique(codes, return_index=True)
+    repeated_positions = np.flatnonzero(repeated_mask.to_numpy())
+
+    duplicate_mask = repeated_mask.copy()
+    duplicate_mask.iloc[repeated_positions[first_positions]] = False
+
+    order = np.argsort(-group_counts, kind="stable")
+    representatives = repeated.iloc[first_positions[order]].reset_index(
+        drop=True
     )
-    repeated = df.loc[repeated_mask, columns]
+    groups = pd.concat(
+        [
+            representatives,
+            pd.Series(group_counts[order], name="count"),
+        ],
+        axis=1,
+    )
+    return DuplicateData(duplicate_mask, repeated_mask, groups)
+
+
+def duplicate_mask(df: pd.DataFrame) -> pd.Series:
+    """Return a first-occurrence duplicate mask without building groups."""
+    columns: list[ColumnName] = list(df.columns)
+    if _can_use_pandas_duplicates(df, columns):
+        try:
+            return df.duplicated()
+        except Exception:
+            pass
+    duplicate_mask, _ = _duplicate_masks(_row_keys(df, columns), df.index)
+    return duplicate_mask
+
+
+def _structural_duplicate_data(
+    df: pd.DataFrame,
+    columns: list[ColumnName],
+) -> DuplicateData:
+    keys = _row_keys(df, columns)
+    duplicate_mask, repeated_mask = _duplicate_masks(keys, df.index)
     grouped: dict[
         tuple[_ValueKey, ...], tuple[tuple[object, ...], int]
     ] = {}
-    for row in repeated.itertuples(index=False, name=None):
-        key = tuple(_identity(value)[0] for value in row)
+    rows = df.loc[:, columns].itertuples(index=False, name=None)
+    for key, row, is_repeated in zip(keys, rows, repeated_mask):
+        if not is_repeated:
+            continue
         if key in grouped:
             values, count = grouped[key]
             grouped[key] = values, count + 1
@@ -214,3 +274,19 @@ def duplicate_data(
         columns=[*columns, "count"],
     )
     return DuplicateData(duplicate_mask, repeated_mask, groups)
+
+
+def duplicate_data(
+    df: pd.DataFrame,
+    subset: list[ColumnName] | None = None,
+) -> DuplicateData:
+    """Return duplicate masks and groups without hash-dependent pandas calls."""
+    columns: list[ColumnName] = (
+        subset if subset is not None else list(df.columns)
+    )
+    if _can_use_pandas_duplicates(df, columns):
+        try:
+            return _pandas_duplicate_data(df, columns)
+        except Exception:
+            pass
+    return _structural_duplicate_data(df, columns)
