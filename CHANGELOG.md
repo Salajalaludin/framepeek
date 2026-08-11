@@ -4,6 +4,8 @@ Notable changes to FramePeek are recorded here.
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-08-11
+
 ### Performance
 
 - Reused one duplicate analysis across each profile run instead of computing it
