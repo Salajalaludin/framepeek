@@ -4,11 +4,13 @@ Notable changes to FramePeek are recorded here.
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-10-03
+
 ### Combined 0.2.3 maintenance release
 
 The planned 0.2.3–0.2.8 milestones are consolidated into release 0.2.3, following
 0.2.2 without skipping version numbers. Report schema remains 1.1 and
-serialization schema remains 1.0. Publication and release date are pending.
+serialization schema remains 1.0.
 
 ### Performance
 
