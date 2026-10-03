@@ -64,8 +64,9 @@ and are published to production PyPI only.
 
 # 4. Prepare the release
 
-Determine the target version using the versioning policy, including its explicit
-exception for the consolidated 0.2.8 maintenance release.
+Determine the target version using the versioning policy. The consolidated
+maintenance release follows 0.2.2 as 0.2.3; roadmap milestones do not consume
+release numbers.
 
 Before RC1:
 

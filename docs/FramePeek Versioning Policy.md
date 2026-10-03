@@ -299,11 +299,6 @@ Never silently modify code between the final tested RC and stable release.
 
 FramePeek does not intentionally skip stable version numbers.
 
-The consolidated maintenance release is an explicit exception: the planned
-0.2.3–0.2.8 roadmap work ships together as 0.2.8 after 0.2.2. Versions 0.2.3–0.2.7
-are not published separately. This exception does not permit new public API or
-schema changes in a patch; subsequent patches resume sequential numbering.
-
 If current stable is:
 
 `0.2.0`

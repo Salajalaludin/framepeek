@@ -1,7 +1,8 @@
 # Combined maintenance benchmarks
 
 Run date: 2026-10-03. Windows, Python 3.12.10, pandas 3.0.5, NumPy 2.5.1: the same
-environment for tag v0.2.2 and the combined 0.2.8 checkout. Run the same
+environment for tag v0.2.2 and the combined maintenance implementation at
+commit d27b5d9. These changes target release 0.2.3. Run the same
 `benchmarks/benchmark_profile.py --large` against each source tree. Synthetic
 frames are created before measurement; each call uses `perf_counter` and
 `tracemalloc`. These are single-run measurements, not statistical estimates or
