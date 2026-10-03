@@ -1,10 +1,10 @@
 # Historical GitHub release backfill
 
 Audit date: 2026-10-03. PyPI contains five stable releases, 0.1.0 through 0.2.2.
-GitHub Releases contains 0.2.0, 0.2.1, and 0.2.2. The existing tags v0.1.0 and
-v0.1.1 need GitHub Releases with the following changelog-derived notes.
-These notes are prepared for publication; no new package build or PyPI upload
-is needed. Preserve the original tag targets and mark neither release latest.
+GitHub Releases now contains all five versions. Releases v0.1.0 and v0.1.1
+were backfilled on 2026-10-03 with the following changelog-derived notes.
+The original tag targets were preserved, neither release was marked latest,
+and no package was rebuilt or uploaded to PyPI.
 
 ## v0.1.0
 

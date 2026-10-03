@@ -313,11 +313,10 @@ re-upload an existing PyPI version.
 
 The 2026-10-03 audit confirmed published GitHub Releases for `v0.2.0`, `v0.2.1`,
 and `v0.2.2`. The old instruction saying `v0.2.0` was missing is obsolete.
-PyPI also contains `0.1.0` and `0.1.1`, and both immutable git tags exist, but
-their GitHub Releases are missing. Backfill notes are prepared in
-[historical release notes](historical-release-notes.md). Publishing those two
-GitHub Releases remains a release-maintainer action; do not claim the historical
-synchronization is complete before they are published.
+The GitHub Releases for `0.1.0` and `0.1.1` were backfilled on 2026-10-03
+using their existing immutable tags and the
+[historical release notes](historical-release-notes.md). All five historical
+stable PyPI versions now have matching GitHub Releases.
 
 ---
 
