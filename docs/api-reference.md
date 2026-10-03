@@ -29,6 +29,9 @@ profile(
     high_cardinality_ratio=0.5,
     imbalance_ratio=3,
     target_type="auto",
+    outlier_min_samples=4,
+    rare_max_count=1,
+    rare_concentration_ratio=0.1,
     warning_sample_size=1000,
     random_state=0,
     deep_memory=True,
@@ -40,7 +43,7 @@ profile(
 | `df` | Non-empty pandas `DataFrame` with unique column names. |
 | `target_column` | Optional existing column name to analyze as the target. |
 | `correlation_method` | `pearson`, `spearman`, or `kendall`. |
-| `outlier_method` | Outlier method; the MVP supports only `iqr`. |
+| `outlier_method` | Outlier method; supports only `iqr`. |
 | `outlier_multiplier` | Positive multiplier applied to the IQR bounds. |
 | `top_n_categories` | Positive number of leading values retained per categorical column. |
 | `missing_thresholds` | Three increasing severity boundaries within `0..100`. |
@@ -48,6 +51,9 @@ profile(
 | `high_cardinality_ratio` | Categorical unique-value ratio within `(0, 1]`. |
 | `imbalance_ratio` | Majority-to-minority ratio above which a target is imbalanced; must exceed `1`. |
 | `target_type` | `auto`, `categorical`, or `numeric`; overrides target interpretation when requested. |
+| `outlier_min_samples` | Positive minimum finite sample size for the IQR analysis. |
+| `rare_max_count` | Maximum frequency considered rare by quality warnings; at least one. |
+| `rare_concentration_ratio` | Minimum share of non-null categorical rows in rare categories that triggers a warning; within `(0, 1]`. |
 | `warning_sample_size` | Positive maximum number of text values parsed by warning heuristics. |
 | `random_state` | Seed used for reproducible warning sampling. |
 | `deep_memory` | Whether overview memory usage inspects Python-owned object data. Disable for a faster shallow estimate. |
@@ -55,14 +61,21 @@ profile(
 Returns a dictionary with `metadata`, `overview`, `columns`, `missing`,
 `duplicates`, `numeric`, `categorical`, `outliers`, `correlations`, `target`,
 and `warnings`. Metadata records versions, configuration, generation time, and
-whether warning sampling was used.
+whether warning sampling was used. Report schema remains `1.1`.
+`metadata.configuration.warning_sample_size` is the configured upper limit.
+`metadata.sampling.warning_sample_size` is the maximum number of non-null values
+actually parsed for any categorical column (zero when none were parsed).
+`warnings_used` is true only if a categorical column actually needed sampling.
 
-### `print_report(report)`
+### `format_report(report, *, max_rows=20, max_columns=12, max_colwidth=40)`
 
-Prints every top-level report section under a title. Nested tables receive
-subheadings, and rows, columns, and long cell values are not replaced with
-formatter-generated ellipses. It returns `None` without changing the report or
-global pandas display options.
+Returns bounded text with a title for each top-level section and subheadings
+for nested tables. Tables exceeding the supplied limits show ellipses.
+
+### `print_report(report, *, max_rows=20, max_columns=12, max_colwidth=40)`
+
+Prints the same bounded text and returns `None`. Neither formatter changes the
+report or global pandas display options.
 
 ### `to_serializable(value)`
 
@@ -103,6 +116,10 @@ Returns a `DataFrame` with `column`, `missing`, `missing_pct`, `non_missing`,
 row-level totals, while `result["patterns"]` groups rows by the tuple of columns
 that are missing together. `thresholds` must be a tuple of three increasing
 values within `0..100`.
+Patterns exclude complete rows, sort by descending row count, and preserve
+first occurrence when counts tie. Processing uses bounded packed masks, but
+the exact output can still grow to one pattern per row. No sampling or
+truncation is applied.
 
 ### `duplicates(df, subset=None, max_examples=5)`
 
@@ -120,6 +137,11 @@ Returns one `DataFrame` row per numeric, non-boolean column. It includes count,
 missingness, center, spread, quartiles, skewness, kurtosis, zero counts, and
 negative-value counts. Returns an empty table with stable columns when there
 are no numeric columns.
+Missing values and positive/negative infinity are reported separately; summary
+statistics use finite values. `coefficient_of_variation` is sample standard
+deviation / mean for a positive mean and at least two finite values. It is
+`NaN` for zero/negative means or an insufficient sample. Interpret this ratio
+only for measurements with a meaningful zero.
 
 ### `categorical(df, top_n=5, rare_max_count=1)`
 
@@ -136,6 +158,9 @@ Returns one `DataFrame` row per numeric, non-boolean column with IQR bounds and
 potential outlier counts. `method` must be `iqr`; `multiplier` must be positive.
 Results are diagnostic and do not remove values.
 `applicable` and `limitation` explain insufficient samples or a zero IQR.
+In either case, outlier counts, percentages, bounds, and extrema are `NaN`.
+Quartiles/IQR remain available for `zero_iqr`. A nonzero IQR, even a small one,
+uses the configured bounds without an arbitrary tolerance.
 
 ### `correlations`
 
@@ -163,6 +188,9 @@ empty tables instead of raising. Set `include_matrix=False` for pair-only output
 and `top_pairs` to retain only the strongest pairs. `sample_rows` performs
 reproducible row sampling. Kendall on more than 10,000 rows requires
 `sample_rows`.
+`profile()` does not expose these controls: its correlation calculation retains
+the defaults, including the 50-column limit. Use the standalone function for
+larger selections or sampled Kendall analysis.
 
 Correlation strength labels are descriptive heuristics, not universal
 statistical rules; interpretation depends on the domain and sample.
@@ -189,8 +217,13 @@ quality_warnings(
     high_cardinality_ratio=0.5,
     outlier_threshold=5,
     imbalance_ratio=3,
+    rare_max_count=1,
+    rare_concentration_ratio=0.1,
     sample_size=1000,
     random_state=0,
+    *,
+    outlier_method="iqr",
+    outlier_multiplier=1.5,
 )
 ```
 
@@ -213,7 +246,7 @@ Returns a `DataFrame` with `code`, `severity`, `column`, `message`,
 | `potential_outliers` | IQR outlier percentage exceeds `outlier_threshold`. |
 | `class_imbalance` | A categorical target meets `imbalance_ratio`. |
 | `non_finite_values` | A numeric column contains positive or negative infinity. |
-| `numeric_identifier` | Numeric-looking text appears identifier-like. |
+| `numeric_identifier` | At least 90% of sampled text parses numerically, and either more than 50% has a leading zero or all non-null values are unique with sampled text of the same length (at least five characters). |
 | `empty_string` | Text contains empty or whitespace-only values. |
 | `surrounding_whitespace` | Text contains leading or trailing whitespace. |
 | `category_case` | Categories differ only by letter case. |
@@ -225,7 +258,7 @@ Returns a `DataFrame` with `code`, `severity`, `column`, `message`,
 `imbalance_ratio` must exceed one. Text parsing uses at most `sample_size`
 randomly selected values and is reproducible with `random_state`.
 
-## MVP limitations
+## Limitations
 
 - pandas `DataFrame` input only; no files, plotting, HTML report, CLI, or
   notebook integration.

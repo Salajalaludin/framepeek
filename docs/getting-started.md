@@ -61,4 +61,4 @@ strong_pairs = fp.correlations(df, method="spearman", threshold=0.7)
 - FramePeek does not alter the source DataFrame.
 
 See the [API reference](api-reference.md) for parameters, output shapes,
-warning codes, and MVP limitations.
+warning codes, and current limitations.

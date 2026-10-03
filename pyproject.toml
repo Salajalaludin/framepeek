@@ -4,16 +4,39 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "framepeek"
-version = "0.2.2"
+version = "0.2.3"
 description = "Lightweight exploratory data analysis for pandas DataFrames"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Sal" }]
+maintainers = [{ name = "Sal" }]
+keywords = ["pandas", "dataframe", "eda", "data-quality", "profiling"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering :: Information Analysis",
+    "Typing :: Typed",
+]
 dependencies = [
     "pandas>=2.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/Salajalaludin/framepeek"
+Documentation = "https://github.com/Salajalaludin/framepeek/blob/main/docs/api-reference.md"
+Repository = "https://github.com/Salajalaludin/framepeek"
+Issues = "https://github.com/Salajalaludin/framepeek/issues"
+Changelog = "https://github.com/Salajalaludin/framepeek/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 dev = [

@@ -1,7 +1,6 @@
 """Profile orchestration and text report formatting."""
 
 from datetime import datetime, timezone
-from importlib.metadata import version
 from platform import python_version
 from typing import Any
 
@@ -9,6 +8,7 @@ import pandas as pd
 
 from . import analysis
 from ._context import AnalysisContext
+from ._version import runtime_version
 from .types import (
     ColumnName,
     CorrelationMethod,
@@ -39,7 +39,7 @@ def profile(
     random_state: int = 0,
     deep_memory: bool = True,
 ) -> ProfileResult:
-    """Run every MVP analysis without mutating the input DataFrame."""
+    """Run all profile analyses without mutating the input DataFrame."""
     validate(df, target_column)
     if not isinstance(deep_memory, bool):
         raise TypeError("deep_memory must be a boolean.")
@@ -51,9 +51,7 @@ def profile(
         min_samples=outlier_min_samples,
         _context=context,
     )
-    correlation_result = analysis.correlations(
-        df, correlation_method, _context=context
-    )
+    correlation_result = analysis.correlations(df, correlation_method, _context=context)
     target_result = (
         analysis.target(
             df,
@@ -67,10 +65,26 @@ def profile(
         if target_column is not None
         else None
     )
+    warning_result = quality_warnings(
+        df,
+        target_column=target_column,
+        missing_threshold=warning_missing_threshold,
+        high_cardinality_ratio=high_cardinality_ratio,
+        imbalance_ratio=imbalance_ratio,
+        outlier_method=outlier_method,
+        outlier_multiplier=outlier_multiplier,
+        rare_max_count=rare_max_count,
+        rare_concentration_ratio=rare_concentration_ratio,
+        sample_size=warning_sample_size,
+        random_state=random_state,
+        _outlier_result=outlier_result,
+        _target_result=target_result,
+        _context=context,
+    )
     return {
         "metadata": {
             "schema_version": "1.1",
-            "framepeek_version": version("framepeek"),
+            "framepeek_version": runtime_version(),
             "pandas_version": pd.__version__,
             "python_version": python_version(),
             "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -84,46 +98,25 @@ def profile(
                 "deep_memory": deep_memory,
             },
             "sampling": {
-                "warnings_used": len(df) > warning_sample_size
-                and any(
-                    metadata.kind == "categorical"
-                    for metadata in context.columns.values()
+                "warnings_used": any(
+                    sampled for _, sampled in context.warning_samples.values()
                 ),
-                "warning_sample_size": min(len(df), warning_sample_size),
+                "warning_sample_size": max(
+                    (size for size, _ in context.warning_samples.values()), default=0
+                ),
                 "random_state": random_state,
             },
         },
         "overview": analysis.overview(df, deep_memory, _context=context),
-        "columns": analysis.columns(
-            df, high_cardinality_ratio, _context=context
-        ),
-        "missing": analysis.missing(
-            df, missing_thresholds, _context=context
-        ),
+        "columns": analysis.columns(df, high_cardinality_ratio, _context=context),
+        "missing": analysis.missing(df, missing_thresholds, _context=context),
         "duplicates": analysis._duplicates_result(df, context.duplicates, 5),
         "numeric": analysis.numeric(df, _context=context),
-        "categorical": analysis.categorical(
-            df, top_n_categories, _context=context
-        ),
+        "categorical": analysis.categorical(df, top_n_categories, _context=context),
         "outliers": outlier_result,
         "correlations": correlation_result,
         "target": target_result,
-        "warnings": quality_warnings(
-            df,
-            target_column=target_column,
-            missing_threshold=warning_missing_threshold,
-            high_cardinality_ratio=high_cardinality_ratio,
-            imbalance_ratio=imbalance_ratio,
-            outlier_method=outlier_method,
-            outlier_multiplier=outlier_multiplier,
-            rare_max_count=rare_max_count,
-            rare_concentration_ratio=rare_concentration_ratio,
-            sample_size=warning_sample_size,
-            random_state=random_state,
-            _outlier_result=outlier_result,
-            _target_result=target_result,
-            _context=context,
-        ),
+        "warnings": warning_result,
     }
 
 

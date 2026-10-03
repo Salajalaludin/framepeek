@@ -4,6 +4,40 @@ Notable changes to FramePeek are recorded here.
 
 ## [Unreleased]
 
+### Combined 0.2.3 maintenance release
+
+The planned 0.2.3–0.2.8 milestones are consolidated into release 0.2.3, following
+0.2.2 without skipping version numbers. Report schema remains 1.1 and
+serialization schema remains 1.0. Publication and release date are pending.
+
+### Performance
+
+- Compute expensive column metadata on demand and cache it per analysis run;
+  numeric summaries retain only the leading value instead of full Python
+  frequency tables.
+- Group missingness using packed masks in bounded chunks, preserving exact
+  patterns, column labels, and first-occurrence ordering for ties.
+- Add numeric, high-cardinality, wide, mixed, and missingness benchmarks that
+  report runtime and peak traced memory, including opt-in million-row cases.
+
+### Fixed
+
+- Record warning sampling and actual parsed sample sizes from execution,
+  including sparse categorical columns and reports without text parsing.
+- Resolve the version from pyproject.toml when importing an uninstalled checkout.
+- Return NaN coefficient of variation for nonpositive means and NaN outlier
+  measurements when IQR analysis is not applicable.
+- Require a majority of leading-zero values for that numeric-identifier
+  heuristic, reducing false positives from isolated values.
+
+### Maintenance
+
+- Check Ruff, source typing, 100% branch coverage, wheel/sdist metadata and
+  contents, isolated installs, report schemas, and consumer typing in normal CI.
+- Test minimum Python/pandas alongside the latest supported Python/pandas pair.
+- Complete package metadata and synchronize API, bounded formatting, statistical
+  semantics, sampling, and release documentation.
+
 ## [0.2.2] - 2026-08-11
 
 ### Performance

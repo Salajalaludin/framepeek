@@ -2,6 +2,15 @@
 
 Roadmap ini menentukan distribusi pekerjaan teknis setelah `0.2.0`.
 
+## Konsolidasi maintenance
+
+Cakupan `0.2.3`–`0.2.8` digabung menjadi satu target rilis `0.2.3` setelah
+`0.2.2`, mengikuti aturan versi berurutan tanpa pengecualian. Nomor pada bagian
+milestone di bawah adalah label rencana historis, bukan enam rilis terpisah.
+Patch berikutnya setelah rilis gabungan ini adalah `0.2.4` bila diperlukan.
+Public API/schema baru tetap dialokasikan ke `0.3.0`. Implementasi lokal dan
+validasi artifact tidak berarti paket sudah dipublikasikan.
+
 Prinsip utama:
 
 - `0.2.x` hanya untuk bug fix, correctness, performance, testing, CI, packaging, dan refactor internal yang backwards-compatible.
@@ -485,7 +494,7 @@ Lengkapi metadata yang tidak memengaruhi API:
 
 # 0.2.x — Reserved Patch Line
 
-Setelah `0.2.8`, seri `0.2.x` tetap terbuka.
+Setelah rilis gabungan `0.2.3`, seri `0.2.x` tetap terbuka.
 
 Tidak ada keharusan bahwa versi berikutnya langsung `0.3.0`.
 
@@ -686,12 +695,7 @@ Public imports tetap berasal dari `framepeek`.
 | `0.2.0` | Current feature/refactor baseline |
 | `0.2.1` | Nested/unhashable correctness |
 | `0.2.2` | Duplicate performance |
-| `0.2.3` | Analysis-context efficiency |
-| `0.2.4` | Missingness scalability |
-| `0.2.5` | Metadata correctness |
-| `0.2.6` | Statistical correctness |
-| `0.2.7` | CI and packaging reliability |
-| `0.2.8` | Documentation and release hardening |
+| `0.2.3` | Combined analysis-context, missingness, metadata, statistics, CI/packaging, and documentation/release hardening |
 | `0.2.x` | Additional backwards-compatible fixes as needed |
 | `0.3.0` | Public API and scalability expansion |
 
@@ -722,16 +726,18 @@ rather than:
 
 Current stable:
 
-`0.2.0`
+`0.2.2`
 
 Next planned release:
 
-`0.2.1`
+`0.2.3` (gabungan cakupan milestone lama `0.2.3`–`0.2.8`; belum dipublikasikan)
 
 Scope:
 
-**Correctness fixes for structural/unhashable value handling only.**
+**Analysis-context efficiency, missingness scalability, metadata/statistical
+correctness, CI/packaging reliability, and documentation/release hardening.**
 
-Performance work follows in `0.2.2`.
+Structural/unhashable correctness and duplicate performance shipped in
+`0.2.1` and `0.2.2` respectively.
 
 Public correlation API changes remain reserved for `0.3.0`.

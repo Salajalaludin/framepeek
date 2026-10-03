@@ -143,9 +143,9 @@ def quality_warnings(
                 unique,
             )
         else:
-            top_ratio = float(
-                metadata.value_counts[0].count / metadata.non_null
-            )
+            leading = metadata.top
+            assert leading is not None
+            top_ratio = float(leading.count / metadata.non_null)
             if top_ratio >= near_constant_ratio:
                 add(
                     "near_constant",
@@ -194,6 +194,7 @@ def quality_warnings(
                 if len(text) > sample_size
                 else text
             )
+            context.warning_samples[name] = (len(parsed_text), len(text) > sample_size)
             numeric_ratio = float(
                 pd.to_numeric(parsed_text, errors="coerce").notna().mean()
             )
@@ -203,7 +204,7 @@ def quality_warnings(
                     and parsed_text.str.len().nunique() == 1
                     and int(parsed_text.str.len().iloc[0]) >= 5
                 )
-                or parsed_text.str.fullmatch(r"0\d+").any()
+                or parsed_text.str.fullmatch(r"0\d+").mean() > 0.5
             )
             if numeric_identifier:
                 add(

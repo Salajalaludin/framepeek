@@ -18,9 +18,20 @@ Activate it with `.venv\Scripts\Activate.ps1` in PowerShell or
 checkout:
 
 ```bash
-python -m pip install -e ".[dev]"
-python -m pytest --cov=framepeek --cov-report=term-missing --cov-fail-under=100
+python -m pip install -e ".[dev,release]"
+python -m ruff check .
+python -m mypy src/framepeek
+python -m pytest --cov=framepeek --cov-branch --cov-report=term-missing --cov-fail-under=100
+python -m build --outdir dist/check
+python -m twine check --strict dist/check/*
+python scripts/verify_artifacts.py dist/check
 ```
+
+Use a new output directory on repeated builds. CI tests Python 3.10 with pandas
+2.0.0 (the supported minimum) and Python 3.14 with the latest pandas. The minimum
+environment uses `tests/constraints-min.txt` to keep NumPy's ABI compatible with
+pandas 2.0. The artifact check installs each distribution in a fresh environment
+outside the source tree and validates schema and public typing.
 
 ## Workflow
 
