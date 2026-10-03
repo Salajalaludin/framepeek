@@ -726,13 +726,13 @@ rather than:
 
 Current stable:
 
-`0.2.2`
+`0.2.3` (2026-10-03; gabungan cakupan milestone lama `0.2.3`–`0.2.8`)
 
 Next planned release:
 
-`0.2.3` (gabungan cakupan milestone lama `0.2.3`–`0.2.8`; belum dipublikasikan)
+`0.2.4` jika diperlukan perbaikan kompatibel berikutnya; ekspansi API tetap `0.3.0`.
 
-Scope:
+Scope shipped in `0.2.3`:
 
 **Analysis-context efficiency, missingness scalability, metadata/statistical
 correctness, CI/packaging reliability, and documentation/release hardening.**
