@@ -2,6 +2,14 @@
 
 Roadmap ini menentukan distribusi pekerjaan teknis setelah `0.2.0`.
 
+## Konsolidasi maintenance
+
+Cakupan `0.2.3`–`0.2.8` digabung menjadi satu target rilis `0.2.8` setelah
+`0.2.2`. Nomor `0.2.3`–`0.2.7` tetap menjadi label cakupan historis, bukan rilis
+terpisah. Ini menggantikan aturan rilis terpisah di bawah untuk batch ini saja.
+Public API/schema baru tetap dialokasikan ke `0.3.0`. Implementasi lokal dan
+validasi artifact tidak berarti paket sudah dipublikasikan.
+
 Prinsip utama:
 
 - `0.2.x` hanya untuk bug fix, correctness, performance, testing, CI, packaging, dan refactor internal yang backwards-compatible.
@@ -722,16 +730,18 @@ rather than:
 
 Current stable:
 
-`0.2.0`
+`0.2.2`
 
 Next planned release:
 
-`0.2.1`
+`0.2.8` (gabungan cakupan `0.2.3`–`0.2.8`; belum dipublikasikan)
 
 Scope:
 
-**Correctness fixes for structural/unhashable value handling only.**
+**Analysis-context efficiency, missingness scalability, metadata/statistical
+correctness, CI/packaging reliability, and documentation/release hardening.**
 
-Performance work follows in `0.2.2`.
+Structural/unhashable correctness and duplicate performance shipped in
+`0.2.1` and `0.2.2` respectively.
 
 Public correlation API changes remain reserved for `0.3.0`.

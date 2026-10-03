@@ -1,7 +1,6 @@
 """Lightweight exploratory data analysis for pandas DataFrames."""
 
-from importlib.metadata import version
-
+from ._version import runtime_version as _runtime_version
 from .analysis import (
     categorical,
     columns,
@@ -33,7 +32,7 @@ from .types import (
 from .validation import validate
 from .warnings import quality_warnings, warnings
 
-__version__ = version("framepeek")
+__version__ = _runtime_version()
 
 __all__ = [
     "__version__",

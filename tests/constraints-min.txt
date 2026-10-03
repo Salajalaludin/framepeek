@@ -1,0 +1,4 @@
+# pandas 2.0 wheels require the NumPy 1.x ABI; test our declared minimum.
+pandas==2.0.0
+numpy==1.24.4
+pyarrow==14.0.0

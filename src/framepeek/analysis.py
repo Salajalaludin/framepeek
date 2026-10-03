@@ -7,6 +7,7 @@ from itertools import combinations
 from math import inf, nan
 from typing import Any, Literal, cast, overload
 
+import numpy as np
 import pandas as pd
 
 from ._context import AnalysisContext, column_kind
@@ -105,9 +106,9 @@ def columns(
         series = df[name]
         metadata = context.columns[name]
         non_null, unique = metadata.non_null, metadata.unique
-        counts = metadata.value_counts
-        top = counts[0].value if counts else None
-        top_frequency = counts[0].count if counts else 0
+        leading = metadata.top
+        top = leading.value if leading else None
+        top_frequency = leading.count if leading else 0
         kind = metadata.kind
         unique_ratio = unique / non_null if non_null else 0.0
         rows.append(
@@ -178,24 +179,41 @@ def missing(
 
     result["severity"] = result["missing_pct"].map(severity)
     result["rank"] = result["missing"].rank(method="min", ascending=False).astype(int)
-    missing_mask = df.isna()
-    incomplete = int(missing_mask.any(axis=1).sum())
+    # Bound temporary masks to roughly one million cells. Only unique packed
+    # patterns survive each chunk; expand column-label tuples once per result.
+    chunk_rows = max(1, min(65536, 1_000_000 // len(df.columns)))
+    pattern_counts: dict[bytes, int] = {}
+    incomplete = 0
+    for start in range(0, len(df), chunk_rows):
+        mask = df.iloc[start : start + chunk_rows].isna().to_numpy()
+        incomplete += int(mask.any(axis=1).sum())
+        packed = np.packbits(mask, axis=1)
+        packed_patterns, first, frequencies = np.unique(
+            packed, axis=0, return_index=True, return_counts=True
+        )
+        for index in np.argsort(first):
+            flags = packed_patterns[index]
+            if flags.any():
+                key = flags.tobytes()
+                pattern_counts[key] = pattern_counts.get(key, 0) + int(
+                    frequencies[index]
+                )
     row_summary: MissingRowsResult = {
         "rows_with_missing": incomplete,
         "complete_rows": len(df) - incomplete,
         "complete_rows_pct": _pct(len(df) - incomplete, len(df)),
     }
-    pattern_counts: dict[tuple[ColumnName, ...], int] = {}
-    for flags in missing_mask.itertuples(index=False, name=None):
-        pattern = tuple(
-            name for name, is_missing in zip(df.columns, flags) if is_missing
-        )
-        if pattern:
-            pattern_counts[pattern] = pattern_counts.get(pattern, 0) + 1
     patterns = pd.DataFrame(
         [
             {
-                "missing_columns": pattern,
+                "missing_columns": tuple(
+                    df.columns[
+                        np.unpackbits(
+                            np.frombuffer(pattern, dtype=np.uint8),
+                            count=len(df.columns),
+                        ).astype(bool)
+                    ]
+                ),
                 "rows": count,
                 "rows_pct": _pct(count, len(df)),
             }
@@ -249,9 +267,7 @@ def duplicates(
         if not subset:
             raise ValueError("subset must contain at least one column.")
 
-    keys: list[ColumnName] = (
-        list(subset) if subset is not None else list(df.columns)
-    )
+    keys: list[ColumnName] = list(subset) if subset is not None else list(df.columns)
     return _duplicates_result(df, duplicate_data(df, keys), max_examples)
 
 
@@ -333,7 +349,7 @@ def numeric(
                 "q3": q3,
                 "iqr": q3 - q1,
                 "coefficient_of_variation": (
-                    std / mean if count > 1 and mean != 0 else nan
+                    std / mean if count > 1 and mean > 0 else nan
                 ),
                 "skewness": clean.skew() if count > 2 else nan,
                 "kurtosis": clean.kurt() if count > 3 else nan,
@@ -402,16 +418,10 @@ def categorical(
                 "missing_pct": _pct(len(series) - non_null, len(series)),
                 "top": counts[0].value if counts else None,
                 "top_frequency": counts[0].count if counts else 0,
-                "top_pct": _pct(counts[0].count, non_null)
-                if counts
-                else 0.0,
-                "cardinality_ratio": round(unique / non_null, 4)
-                if non_null
-                else 0.0,
+                "top_pct": _pct(counts[0].count, non_null) if counts else 0.0,
+                "cardinality_ratio": round(unique / non_null, 4) if non_null else 0.0,
                 "top_categories": top_categories,
-                "rare_categories": sum(
-                    item.count <= rare_max_count for item in counts
-                ),
+                "rare_categories": sum(item.count <= rare_max_count for item in counts),
                 "singleton_categories": sum(item.count == 1 for item in counts),
             }
         )
@@ -473,10 +483,6 @@ def outliers(
                     "q1": q1,
                     "q3": q3,
                     "iqr": iqr,
-                    "outlier_count": 0,
-                    "outlier_pct": 0.0,
-                    "lower_outliers": 0,
-                    "upper_outliers": 0,
                     "sample_size": len(clean),
                     "applicable": False,
                     "limitation": "zero_iqr",
@@ -704,11 +710,7 @@ def target(
             ],
             columns=["value", "count", "percentage", "transformed"],
         )
-        ratio = (
-            float(counts[0].count / counts[-1].count)
-            if len(counts) > 1
-            else 1.0
-        )
+        ratio = float(counts[0].count / counts[-1].count) if len(counts) > 1 else 1.0
         return {
             "type": "categorical",
             "classes": len(counts),

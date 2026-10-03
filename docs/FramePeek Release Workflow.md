@@ -1,12 +1,13 @@
 # FramePeek Release Workflow
 
-This document defines how a version selected according to `VERSIONING.md` moves through:
+This document defines how a version selected according to the
+[versioning policy](FramePeek%20Versioning%20Policy.md) moves through:
 
 1. git/GitHub;
 2. TestPyPI;
 3. PyPI.
 
-`VERSIONING.md` decides **which version number to use**.
+The versioning policy decides **which version number to use**.
 
 This document decides **how that version is published safely**.
 
@@ -63,7 +64,8 @@ and are published to production PyPI only.
 
 # 4. Prepare the release
 
-Determine the target version using `VERSIONING.md`.
+Determine the target version using the versioning policy, including its explicit
+exception for the consolidated 0.2.8 maintenance release.
 
 Before RC1:
 
@@ -80,6 +82,26 @@ Required checks:
 - wheel and sdist build;
 - strict package metadata validation;
 - clean installation tests.
+
+Run the same local checks as normal CI:
+
+```bash
+python -m pip install -e ".[dev,release]"
+python -m ruff check .
+python -m mypy src/framepeek
+python -m pytest --cov=framepeek --cov-branch --cov-report=term-missing --cov-fail-under=100
+python -m build --outdir dist/check
+python -m twine check --strict dist/check/*
+python scripts/verify_artifacts.py dist/check
+```
+
+Use a fresh output directory each time. [PyPA build](https://build.pypa.io/en/stable/)
+produces an sdist and builds
+the wheel from that sdist. `verify_artifacts.py` checks metadata,
+README/license/typing contents, then installs each artifact in its own new
+environment. Its smoke check asserts report keys, nested table columns, actual
+values, and both schema versions; its public consumer is type-checked against
+the installed package.
 
 Set:
 
@@ -101,7 +123,7 @@ Recommended tag:
 
 Example:
 
-`v0.2.1rc1`
+`vX.Y.Zrc1`
 
 RC tags may exist on GitHub without creating a GitHub Release.
 
@@ -113,7 +135,7 @@ This makes every TestPyPI artifact traceable to exact source code.
 
 # 6. Build an RC
 
-Always begin with an empty `dist/` directory.
+Always use a fresh artifact directory; do not delete or mix older artifacts.
 
 Build both:
 
@@ -161,6 +183,11 @@ The clean environment must verify at minimum:
 - wheel contents are correct;
 - source-distribution installation succeeds.
 
+Download both exact RC artifacts into a new directory and run the verifier
+against them, with the checkout on that RC's revision/version. Dependencies
+and type-check tools come from PyPI; the FramePeek artifact comes from TestPyPI.
+Do not use a combined `--extra-index-url` for dependency resolution.
+
 The tested package must be the downloaded TestPyPI artifact, not an editable local checkout.
 
 ---
@@ -179,11 +206,11 @@ If any problem is found after publishing an RC:
 
 Example:
 
-`0.2.1rc1`
+`X.Y.Zrc1`
 → packaging bug
-→ `0.2.1rc2`
+→ `X.Y.Zrc2`
 
-Never reuse `0.2.1rc1`.
+Never reuse `X.Y.Zrc1`.
 
 ---
 
@@ -193,7 +220,7 @@ Once an RC passes all validation, freeze its functional contents.
 
 The final promotion may only change release metadata such as:
 
-- `0.2.1rc2 → 0.2.1`;
+- `X.Y.ZrcN → X.Y.Z`;
 - changelog release date.
 
 Any functional source, dependency, API, or packaging change invalidates the tested RC and requires another RC.
@@ -220,7 +247,7 @@ Never move or recreate a published stable tag.
 
 Build stable artifacts only from the exact tagged release commit.
 
-Start from an empty `dist/`.
+Use a fresh artifact directory for the tagged version.
 
 Build once.
 
@@ -253,7 +280,8 @@ Check:
 
 A PyPI version is immutable.
 
-If the stable release contains a defect after publication, fix it in a new version according to `VERSIONING.md`.
+If the stable release contains a defect after publication, fix it in a new
+version according to the versioning policy.
 
 Never attempt to replace the existing release.
 
@@ -275,19 +303,20 @@ No stable PyPI release is considered complete without its GitHub Release.
 
 ---
 
-# 15. Current historical correction
+# 15. Historical release audit
 
-The repository currently contains tag:
+Before publishing, compare all stable PyPI versions and stable git tags with
+GitHub Releases. Exclude RC tags. Backfill missing GitHub Releases using the
+existing immutable tag and matching changelog section; never recreate tags or
+re-upload an existing PyPI version.
 
-`v0.2.0`
-
-but no corresponding published GitHub Release.
-
-Create the missing `v0.2.0` GitHub Release before the next stable FramePeek release.
-
-Do not modify or recreate the existing `v0.2.0` tag.
-
-Use the existing tag and the matching `0.2.0` changelog entry.
+The 2026-10-03 audit confirmed published GitHub Releases for `v0.2.0`, `v0.2.1`,
+and `v0.2.2`. The old instruction saying `v0.2.0` was missing is obsolete.
+PyPI also contains `0.1.0` and `0.1.1`, and both immutable git tags exist, but
+their GitHub Releases are missing. Backfill notes are prepared in
+[historical release notes](historical-release-notes.md). Publishing those two
+GitHub Releases remains a release-maintainer action; do not claim the historical
+synchronization is complete before they are published.
 
 ---
 
@@ -372,4 +401,4 @@ Every PyPI stable release has exactly one matching GitHub stable release.
 
 Release workflow never chooses the version.
 
-`VERSIONING.md` chooses the version before release preparation begins.
+The versioning policy chooses the version before release preparation begins.
